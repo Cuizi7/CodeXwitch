@@ -83,6 +83,7 @@ final class SwitcherTests: XCTestCase {
         app.failQuit = true; await s.switchTo(b.account.id)
         XCTAssertFalse(trace.events.contains("install-target")); XCTAssertFalse(trace.events.contains("launch"))
         XCTAssertEqual(try store.current()?.data, a.data); XCTAssertFalse(s.state.isBusy)
+        XCTAssertFalse(s.state.isWaitingForQuit)
         XCTAssertTrue(s.state.error?.contains("退出 Codex") == true)
     }
     func testCaptureFailureStopsMutation() async throws {

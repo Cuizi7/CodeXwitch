@@ -14,6 +14,7 @@ struct SwitcherState: Equatable {
     var current: Account?
     var accounts: [Account] = []
     var isBusy = false
+    var isWaitingForQuit = false
     var error: String?
 }
 
@@ -66,7 +67,7 @@ final class Switcher {
                 return
             }
             step = "读取目标账号"; let target = try repository.credential(for: id)
-            step = "退出 Codex"; try await app.quit()
+            step = "退出 Codex"; try await quitCodex()
             step = "读取当前账号"; let current = try repository.current()
             if let current { step = "保存当前账号"; try repository.capture(current) }
             step = "写入目标账号"; try repository.install(target)
@@ -84,7 +85,7 @@ final class Switcher {
         do {
             // Reject unsupported authentication before stopping the GUI.
             _ = try repository.current()
-            step = "退出 Codex"; try await app.quit()
+            step = "退出 Codex"; try await quitCodex()
             step = "读取当前账号"; let current = try repository.current()
             if let current { step = "保存当前账号"; try repository.capture(current) }
             step = "移除活动认证"; try repository.clearCurrent()
@@ -106,6 +107,16 @@ final class Switcher {
             Diagnostics.operations.error("operation.failed id=\(self.diagnosticID, privacy: .public) action=delete stage=remove_saved error_type=\(String(reflecting: type(of: error)), privacy: .public)")
             operationError = "删除保存记录失败：\(error.localizedDescription)"
         }
+    }
+
+    private func quitCodex() async throws {
+        state.isWaitingForQuit = true
+        onChange?(state)
+        defer {
+            state.isWaitingForQuit = false
+            onChange?(state)
+        }
+        try await app.quit()
     }
 
     private func beginOperation(_ action: String) -> Bool {

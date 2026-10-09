@@ -20,7 +20,8 @@ final class MenuController: NSObject, NSMenuDelegate {
     func rebuild() {
         menu.removeAllItems()
         let state = switcher.state
-        let status = add(state.isBusy ? "Codex：正在处理…" : "Codex：\(state.isRunning ? "运行中" : "未运行")")
+        let status = add(state.isWaitingForQuit ? "Codex：等待退出…" :
+                         state.isBusy ? "Codex：正在处理…" : "Codex：\(state.isRunning ? "运行中" : "未运行")")
         status.image = NSImage(size: NSSize(width: 10, height: 10), flipped: false) { rect in
             (state.isRunning ? NSColor.systemGreen : NSColor.secondaryLabelColor).setFill()
             NSBezierPath(ovalIn: rect.insetBy(dx: 1, dy: 1)).fill()
@@ -30,6 +31,7 @@ final class MenuController: NSObject, NSMenuDelegate {
         if let account = state.current { current = account.displayName }
         else { current = state.error == nil ? "未登录" : "无法读取账号" }
         add("当前：\(current)")
+        if state.isWaitingForQuit { add("请在 Codex 中确认退出（最多等待 60 秒）") }
         if !state.isRunning, let account = state.current {
             menu.addItem(.separator())
             let item = add("启动 Codex", action: #selector(switchAccount(_:)), enabled: !state.isBusy)

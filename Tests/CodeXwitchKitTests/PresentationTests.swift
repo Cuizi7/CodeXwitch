@@ -31,10 +31,28 @@ final class PresentationTests: XCTestCase {
         app.holdQuit = true; let operation = Task { await s.switchTo(b.account.id) }
         while app.quitContinuation == nil { await Task.yield() }
         menu.rebuild(); settings.reload()
+        XCTAssertEqual(menu.menu.items.first?.title, "Codex：等待退出…")
+        XCTAssertTrue(menu.menu.items.contains { $0.title == "请在 Codex 中确认退出（最多等待 60 秒）" })
         XCTAssertFalse(try XCTUnwrap(menu.menu.items.first { $0.title == "添加账号…" }).isEnabled)
         XCTAssertFalse(try XCTUnwrap(menu.menu.items.first { $0.title == "b@example.com" }).isEnabled)
         XCTAssertTrue(buttons(try XCTUnwrap(settings.window?.contentView)).allSatisfy { !$0.isEnabled })
         app.quitContinuation?.resume(); await operation.value
+        menu.rebuild()
+        XCTAssertFalse(menu.menu.items.contains { $0.title == "请在 Codex 中确认退出（最多等待 60 秒）" })
+    }
+    func testAddAccountShowsConfirmationHintBeforeTouchingAuthentication() async throws {
+        let (d, store, app, s, a, _) = try setup(); defer { withExtendedLifetime(d) {} }
+        let menu = MenuController(switcher: s, openSettings: {}, quitManager: {})
+        app.holdQuit = true
+        let operation = Task { await s.addAccount() }
+        while app.quitContinuation == nil { await Task.yield() }
+        menu.rebuild()
+        XCTAssertEqual(menu.menu.items.first?.title, "Codex：等待退出…")
+        XCTAssertTrue(menu.menu.items.contains { $0.title == "请在 Codex 中确认退出（最多等待 60 秒）" })
+        XCTAssertEqual(try store.current()?.data, a.data)
+        app.quitContinuation?.resume(); await operation.value
+        menu.rebuild()
+        XCTAssertFalse(menu.menu.items.contains { $0.title == "请在 Codex 中确认退出（最多等待 60 秒）" })
     }
     func testSettingsRowsRefreshOnReopen() async throws {
         let (d, _, _, s, _, b) = try setup(); defer { withExtendedLifetime(d) {} }

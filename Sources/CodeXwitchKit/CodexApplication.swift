@@ -5,14 +5,19 @@ import OSLog
 final class CodexApplication: AppLifecycle {
     private let bundleIdentifier: String
     private let quitTimeout: TimeInterval
+    private let applicationLookup: (String) -> [NSRunningApplication]
     private var rememberedURL: URL?
     private var running: [NSRunningApplication] {
-        NSRunningApplication.runningApplications(withBundleIdentifier: bundleIdentifier).filter { !$0.isTerminated }
+        applicationLookup(bundleIdentifier).filter { !$0.isTerminated }
     }
     var isRunning: Bool { !running.isEmpty }
-    init(bundleIdentifier: String = "com.openai.codex", quitTimeout: TimeInterval = 10) {
+    init(bundleIdentifier: String = "com.openai.codex", quitTimeout: TimeInterval = 60,
+         applicationLookup: @escaping (String) -> [NSRunningApplication] = {
+             NSRunningApplication.runningApplications(withBundleIdentifier: $0)
+         }) {
         self.bundleIdentifier = bundleIdentifier
         self.quitTimeout = quitTimeout
+        self.applicationLookup = applicationLookup
     }
     func quit() async throws {
         let attempt = UUID().uuidString
@@ -31,8 +36,8 @@ final class CodexApplication: AppLifecycle {
         let deadline = ProcessInfo.processInfo.systemUptime + quitTimeout
         var lastSnapshot = ""
         var nextSample = started
-        // Preserve the exit decision. Fresh enumeration below is diagnostic only.
-        while applications.contains(where: { !$0.isTerminated }) || isRunning {
+        // Captured AppKit wrappers can stay stale after termination; use the current list.
+        while isRunning {
             let now = ProcessInfo.processInfo.systemUptime
             let captured = describe(applications)
             let fresh = describe(running)
@@ -91,7 +96,7 @@ enum AppError: LocalizedError {
         switch self {
         case .notFound: "未找到官方 Codex App，请先安装并正常启动它。"
         case .quitRefused: "Codex 拒绝退出，请处理其窗口中的提示后重试。"
-        case .quitTimeout: "等待 Codex 退出超时，认证尚未替换，请退出后重试。"
+        case .quitTimeout: "等待 Codex 退出超时，认证尚未修改。请在 Codex 中确认退出后重试。"
         case .launch: "无法启动官方 Codex App，请重试或从 Finder 启动。"
         case .activate: "无法显示 Codex 窗口，请从 Dock 打开。"
         }
