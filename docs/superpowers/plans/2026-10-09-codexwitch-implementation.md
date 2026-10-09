@@ -106,13 +106,13 @@ XCTAssertEqual(try Credentials.parse(fixture()).account.id,
 - `struct SwitcherState: Equatable { var isRunning: Bool; var current: Account?; var accounts: [Account]; var isBusy: Bool; var error: String? }`。
 - `@MainActor final class Switcher`：`init(repository: any AccountRepository, app: any AppLifecycle)`；`private(set) var state: SwitcherState`；`var onChange: ((SwitcherState) -> Void)?`；`refresh()`；`switchTo(_ id: String) async`；`addAccount() async`；`deleteAccount(_ id: String, confirmed: Bool)`。操作错误收敛为状态，不向 UI 抛 token/内部身份。
 
-- [ ] **Step 1: 写失败测试。** `@MainActor` 的测试使用记录调用顺序的假仓库/FakeApp；按以下断言分别测试，不产生真实进程：
+- [x] **Step 1: 写失败测试。** `@MainActor` 的测试使用记录调用顺序的假仓库/FakeApp；按以下断言分别测试，不产生真实进程：
 
 ```swift
 // testSwitchOrder
-XCTAssertEqual(events, ["read-target", "quit", "read-current", "capture-current", "install-target", "launch"])
+XCTAssertEqual(events, ["read-current", "read-target", "quit", "read-current", "capture-current", "install-target", "launch"])
 // testAddOrder
-XCTAssertEqual(events, ["quit", "read-current", "capture-current", "clear-current", "forget-suppression", "launch"])
+XCTAssertEqual(events, ["read-current", "quit", "read-current", "capture-current", "clear-current", "forget-suppression", "launch"])
 // testCancelledDelete
 XCTAssertEqual(events, [])
 // testBusyOperationIgnoresSecondClick
@@ -125,10 +125,10 @@ XCTAssertEqual(launchCount, 1)
 
 `testDeletedCurrentIsNotRecapturedDuringSwitch`：实际临时 AccountStore 删除 A 后切 B，A 不重新保存；`testAddReenablesCaptureAfterRemoval`：添加流程完成清空后解除排除，随后登录 A 并 refresh 可以保存。`testMalformedRefreshDoesNotRemoveSavedAccounts`：部分 JSON 时 current 不显示旧身份为确切新状态，error 有说明、原列表保留、timer 不触发重启。
 
-- [ ] **Step 2: 确认失败。** Run `swift test --filter SwitcherTests`；Expected：接口缺失或行为断言 FAIL。
-- [ ] **Step 3: 实现 Switcher。** 操作开始同步设置 isBusy，`defer` 恢复；所有刷新及删除在 busy 时跳过，避免同一程序内重入。按上述顺序工作，quit 后重读当前凭据；未登录时无需保存。capture 尊重排除规则。失败只报告，不回滚；refresh 不立即抹掉未处理的操作错误。current/运行状态只来自本次磁盘读和 App 枚举，不依赖启动指针。
-- [ ] **Step 4: 确认通过。** Run `swift test --filter SwitcherTests`；Expected：所有顺序、失败、外部启动和删除测试 PASS。
-- [ ] **Step 5: Commit。** `git add Sources/CodeXwitchKit/Switcher.swift Tests/CodeXwitchKitTests`，`git commit -m "feat: switch and add accounts through the original app"`。
+- [x] **Step 2: 确认失败。** Run `swift test --filter SwitcherTests`；Expected：接口缺失或行为断言 FAIL。
+- [x] **Step 3: 实现 Switcher。** 操作开始同步设置 isBusy，`defer` 恢复；所有刷新及删除在 busy 时跳过，避免同一程序内重入。按上述顺序工作，quit 后重读当前凭据；未登录时无需保存。capture 尊重排除规则。失败只报告，不回滚；refresh 不立即抹掉未处理的操作错误。current/运行状态只来自本次磁盘读和 App 枚举，不依赖启动指针。
+- [x] **Step 4: 确认通过。** Run `swift test --filter SwitcherTests`；Expected：所有顺序、失败、外部启动和删除测试 PASS。
+- [x] **Step 5: Commit。** `git add Sources/CodeXwitchKit/Switcher.swift Tests/CodeXwitchKitTests`，`git commit -m "feat: switch and add accounts through the original app"`。
 
 ## Task 3: 官方 App 生命周期、菜单及设置窗口
 
