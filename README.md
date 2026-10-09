@@ -37,6 +37,18 @@ open build/CodeXwitch.app
 
 账号快照保存在 `~/Library/Application Support/CodeXwitch/accounts/`，排除记录是同目录上级的 `suppressed-account.json`。私有目录 0700、文件 0600；凭据只保存在本机，不输出 token、不上传数据，不使用 `codex logout` 撤销保存凭据。该目录含登录凭据，不要提交或公开它。
 
+## 诊断日志
+
+0.1.1 起使用 macOS 系统统一日志，Console 中按 subsystem `local.codexwitch.app` 过滤，或运行：
+
+```sh
+/usr/bin/log show --last 30m --info --style compact --predicate 'subsystem == "local.codexwitch.app"'
+```
+
+退出相关日志包含随机 attempt ID、PID、terminate 请求结果、耗时、原对象 captured 与重新枚举 fresh 的退出状态、完成或超时判定。等待时状态变化或约每秒记录一次；系统 launch/terminate 通知即使在切换忙碌期间也记录。操作日志包含类型、失败阶段和错误类型，不包含邮箱、账号 ID、token 或认证文件内容。
+
+更新后需重新启动 CodeXwitch 才会启用新日志。日志用于定位退出超时，本版没有修改退出判定或延长 10 秒等待。
+
 ## 设计与验证
 
 - [已批准设计](docs/superpowers/specs/2026-10-09-account-switcher-design.md)

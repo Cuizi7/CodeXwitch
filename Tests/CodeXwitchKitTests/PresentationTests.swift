@@ -84,6 +84,12 @@ final class PresentationTests: XCTestCase {
         controller.menu.performActionForItem(at: index)
         XCTAssertTrue(quit); XCTAssertFalse(app.trace.events.contains("quit"))
     }
+    func testQuitWithNoRunningAppCompletes() async throws {
+        let app = CodexApplication(bundleIdentifier: "local.codexwitch.test.nonexistent", quitTimeout: 0.01)
+        XCTAssertFalse(app.isRunning)
+        try await app.quit()
+        XCTAssertFalse(app.isRunning)
+    }
     func testMissingOfficialAppReportsError() async throws {
         let app = CodexApplication(bundleIdentifier: "local.codexwitch.test.nonexistent")
         XCTAssertFalse(app.isRunning)

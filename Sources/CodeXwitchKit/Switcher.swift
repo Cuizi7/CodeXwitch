@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 
 @MainActor
 protocol AppLifecycle {
@@ -21,6 +22,8 @@ final class Switcher {
     private let repository: any AccountRepository
     private let app: any AppLifecycle
     private var operationError: String?
+    private var diagnosticID = ""
+    private var diagnosticAction = ""
     private(set) var state = SwitcherState()
     var onChange: ((SwitcherState) -> Void)?
 
@@ -51,7 +54,7 @@ final class Switcher {
     }
 
     func switchTo(_ id: String) async {
-        guard beginOperation() else { return }
+        guard beginOperation("switch") else { return }
         defer { finishOperation() }
         var step = "读取当前账号"
         do {
@@ -68,11 +71,14 @@ final class Switcher {
             if let current { step = "保存当前账号"; try repository.capture(current) }
             step = "写入目标账号"; try repository.install(target)
             step = "启动 Codex"; try await app.launch()
-        } catch { operationError = "\(step)失败：\(error.localizedDescription)" }
+        } catch {
+            Diagnostics.operations.error("operation.failed id=\(self.diagnosticID, privacy: .public) action=\(self.diagnosticAction, privacy: .public) stage=\(step, privacy: .public) error_type=\(String(reflecting: type(of: error)), privacy: .public)")
+            operationError = "\(step)失败：\(error.localizedDescription)"
+        }
     }
 
     func addAccount() async {
-        guard beginOperation() else { return }
+        guard beginOperation("add") else { return }
         defer { finishOperation() }
         var step = "读取当前账号"
         do {
@@ -84,20 +90,29 @@ final class Switcher {
             step = "移除活动认证"; try repository.clearCurrent()
             step = "准备重新登录"; try repository.forgetSuppression()
             step = "启动 Codex"; try await app.launch()
-        } catch { operationError = "\(step)失败：\(error.localizedDescription)" }
+        } catch {
+            Diagnostics.operations.error("operation.failed id=\(self.diagnosticID, privacy: .public) action=\(self.diagnosticAction, privacy: .public) stage=\(step, privacy: .public) error_type=\(String(reflecting: type(of: error)), privacy: .public)")
+            operationError = "\(step)失败：\(error.localizedDescription)"
+        }
     }
 
     func deleteAccount(_ id: String, confirmed: Bool) {
-        guard confirmed, beginOperation() else { return }
+        guard confirmed, beginOperation("delete") else { return }
         defer { finishOperation() }
         do {
             let currentID = try repository.current()?.account.id
             try repository.remove(id, currentID: currentID)
-        } catch { operationError = "删除保存记录失败：\(error.localizedDescription)" }
+        } catch {
+            Diagnostics.operations.error("operation.failed id=\(self.diagnosticID, privacy: .public) action=delete stage=remove_saved error_type=\(String(reflecting: type(of: error)), privacy: .public)")
+            operationError = "删除保存记录失败：\(error.localizedDescription)"
+        }
     }
 
-    private func beginOperation() -> Bool {
+    private func beginOperation(_ action: String) -> Bool {
         guard !state.isBusy else { return false }
+        diagnosticID = UUID().uuidString
+        diagnosticAction = action
+        Diagnostics.operations.notice("operation.begin id=\(self.diagnosticID, privacy: .public) action=\(action, privacy: .public)")
         operationError = nil
         state.error = nil
         state.isBusy = true
@@ -105,6 +120,7 @@ final class Switcher {
         return true
     }
     private func finishOperation() {
+        Diagnostics.operations.notice("operation.end id=\(self.diagnosticID, privacy: .public) action=\(self.diagnosticAction, privacy: .public) succeeded=\(self.operationError == nil, privacy: .public)")
         state.isBusy = false
         refresh()
     }

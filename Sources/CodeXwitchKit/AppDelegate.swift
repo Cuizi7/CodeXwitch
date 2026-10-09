@@ -1,4 +1,5 @@
 import AppKit
+import OSLog
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -11,6 +12,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var lastState: SwitcherState?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
+        Diagnostics.application.notice("application.start version=\(version, privacy: .public) pid=\(ProcessInfo.processInfo.processIdentifier, privacy: .public)")
         let home = FileManager.default.homeDirectoryForCurrentUser
         let codex = home.appendingPathComponent(".codex", isDirectory: true)
         let storage = home.appendingPathComponent("Library/Application Support/CodeXwitch", isDirectory: true)
@@ -36,8 +39,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         RunLoop.main.add(timer, forMode: .common)
         self.timer = timer
         for name in [NSWorkspace.didLaunchApplicationNotification, NSWorkspace.didTerminateApplicationNotification] {
-            let observer = NSWorkspace.shared.notificationCenter.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
-                MainActor.assumeIsolated { self?.switcher?.refresh() }
+            let observer = NSWorkspace.shared.notificationCenter.addObserver(forName: name, object: nil, queue: .main) { [weak self] event in
+                // Carry only Sendable metadata into the actor, not Notification/userInfo.
+                let app = event.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication
+                let bundleID = app?.bundleIdentifier
+                let pid = app?.processIdentifier ?? 0
+                let terminated = app?.isTerminated ?? false
+                let kind = event.name == NSWorkspace.didTerminateApplicationNotification ? "terminated" : "launched"
+                MainActor.assumeIsolated {
+                    if bundleID == "com.openai.codex" {
+                        Diagnostics.application.notice("workspace.event type=\(kind, privacy: .public) pid=\(pid, privacy: .public) terminated=\(terminated, privacy: .public)")
+                    }
+                    self?.switcher?.refresh()
+                }
             }
             observers.append(observer)
         }
@@ -79,6 +93,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         switcher?.state.isBusy == true ? .terminateCancel : .terminateNow
     }
     func applicationWillTerminate(_ notification: Notification) {
+        Diagnostics.application.notice("application.stop pid=\(ProcessInfo.processInfo.processIdentifier, privacy: .public)")
         timer?.invalidate()
         for observer in observers { NSWorkspace.shared.notificationCenter.removeObserver(observer) }
     }

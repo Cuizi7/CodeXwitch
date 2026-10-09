@@ -38,3 +38,14 @@
 仍需由用户安排：在 Codex 已运行时打开 CodeXwitch，核对真实账号自动保存与菜单；准备好退出当前 App 后，验证添加 B、切回 A、原会话继续与删除。真实 App 的拒绝退出、OAuth 刷新令牌复用、启动后的身份/计费归属，以及设置窗口完整关闭再打开链路均不由假 App 测试证明。
 
 最低支持版本 macOS 13 是工程部署目标，未在 macOS 13 实机验证，也未验证 Intel 构建。产物为本机 arm64 开发签名应用，未做公开发行 notarization。
+
+## 0.1.1 退出超时诊断日志
+
+用户报告窗口已退出但 CodeXwitch 等待超时。系统 runningboardd 记录在 2026-10-09 20:09:53 移除旧 Codex 主进程 PID 36271；旧版本没有应用操作日志，无法还原当时 captured/fresh 状态与等待起点，因此尚未确认超时根因。
+
+- 加入 AppLifecycle、AccountSwitch、Application 三类 OSLog，记录退出请求、原对象/重新枚举 PID 状态、耗时、超时与系统通知；不记录凭据、邮箱或账号 ID。
+- 保留原退出条件和 10 秒等待；未加入强杀、进程探针、自动回滚或退出策略修复。
+- Xcode 许可最初未接受，CLT 仅验证生产构建与原生日志探针；用户接受许可后，Xcode 27.0 / Swift 6.4 的正常 `swift test` 完整 41 项通过。
+- 原生探针仅针对不存在的测试 bundle ID，实际调用生产退出/启动代码。`log show` 已读到 quit.begin、quit.completed、launch.begin、launch.not_found；未终止真实 Codex。
+- 独立 quick review 未发现日志泄露或退出控制变更。独立 tester 验证正常构建脚本、0.1.1 plist 与 strict 签名均通过。
+- 尚需用户再次触发实际切换，结合新的 quit.wait/timeout 与 Workspace 通知定位原故障；没有把本次日志补充当作超时已修复。
