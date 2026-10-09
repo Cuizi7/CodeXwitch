@@ -133,7 +133,7 @@ Scenario: 外部启动退出与小程序退出
 
 不 fork codex-profiles，不采用两个图标方案。使用原安装 App 的常规退出和启动能力，菜单图标使用系统符号。手动切换账号，不自动按额度轮换。
 
-本设计及下方两张 UI 原型已由用户批准。应用最终名称为 CodeXwitch，中文说明为“Codex 账号切换器”；原型图中的 Codex Accounts 在实现中替换为 CodeXwitch。产品代码尚未开始。
+本设计及下方两张 UI 原型已由用户批准。应用最终名称为 CodeXwitch，中文说明为“Codex 账号切换器”；原型图中的 Codex Accounts 在实现中替换为 CodeXwitch。产品代码已实现，真实账号验收尚待用户安排；见 ../../verification.md。
 
 ## UI 原型
 

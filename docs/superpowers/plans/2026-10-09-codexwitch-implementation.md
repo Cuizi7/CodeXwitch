@@ -159,13 +159,13 @@ XCTAssertEqual(launchCount, 1)
 
 **Interfaces:** Consumes `swift build -c release --product CodeXwitch` 的可执行文件；Produces `build/CodeXwitch.app`，运行方式 `open build/CodeXwitch.app`。脚本仅打包，不自动安装/启动；bundle identifier `local.codexwitch.app`、CFBundleName/DisplayName `CodeXwitch`、LSUIElement true、最低系统版本 13.0。
 
-- [ ] **Step 1: 增加可检查的打包约定。** README 写明 `swift test` 和 `bash scripts/build-app.sh`，本机使用方法和支持范围。打包用后续 bundle/plist/签名检查验证，不为复制文件编写镜像实现的测试，也不把脚本尚不存在当功能失败测试。
-- [ ] **Step 2: 实现脚本和 Info.plist。** 用 `swift build --show-bin-path -c release` 获取路径，创建 Contents/MacOS、Contents/Resources，复制二进制与 plist，ad-hoc 签署本程序；不改签官方 Codex，不增加 sandbox entitlement、登录项或安装器。版本起始 0.1.0；脚本遇到错误停止。
-- [ ] **Step 3: 验证已集成结果。** 按用户 AGENTS 委托一名 tester 执行 `swift test`、`bash scripts/build-app.sh`、`plutil -lint Resources/Info.plist`、`codesign --verify --strict build/CodeXwitch.app`；Expected：测试全 PASS、plist OK、原生 bundle 存在且本地签名检查通过。打包成功不等于登录/切换验收成功；不重复运行无新增变更的测试。
-- [ ] **Step 4: 独立审阅。** 按用户 AGENTS 调用一名 reviewer 检查整个最终改动的凭据保护、删除语义、失败顺序及 scope；不重复 quick review，不给每个小文件另建任务。修复 approved scope 内发现后重跑受影响检查。
-- [ ] **Step 5: 写验收记录。** `docs/verification.md` 分开列自动测试、原生 UI 检查、真实账号检查及未验证项。README 说明仅管理默认文件认证、外部客户端需自行退出、删除当前保存记录不退出 App、取消添加后选择原账号恢复、无自动回滚和源码构建用法。真实 UI/账号验收尚未做时明确写未验证，不把 mock 的 PASS 当实际登录成功。
+- [x] **Step 1: 增加可检查的打包约定。** README 写明 `swift test` 和 `bash scripts/build-app.sh`，本机使用方法和支持范围。打包用后续 bundle/plist/签名检查验证，不为复制文件编写镜像实现的测试，也不把脚本尚不存在当功能失败测试。
+- [x] **Step 2: 实现脚本和 Info.plist。** 用 `swift build --show-bin-path -c release` 获取路径，创建 Contents/MacOS、Contents/Resources，复制二进制与 plist，ad-hoc 签署本程序；不改签官方 Codex，不增加 sandbox entitlement、登录项或安装器。版本起始 0.1.0；脚本遇到错误停止。
+- [x] **Step 3: 验证已集成结果。** 按用户 AGENTS 委托一名 tester 执行 `swift test`、`bash scripts/build-app.sh`、`plutil -lint Resources/Info.plist`、`codesign --verify --strict build/CodeXwitch.app`；Expected：测试全 PASS、plist OK、原生 bundle 存在且本地签名检查通过。打包成功不等于登录/切换验收成功；不重复运行无新增变更的测试。
+- [x] **Step 4: 独立审阅。** 按用户 AGENTS 调用一名 reviewer 检查整个最终改动的凭据保护、删除语义、失败顺序及 scope；不重复 quick review，不给每个小文件另建任务。修复 approved scope 内发现后重跑受影响检查。
+- [x] **Step 5: 写验收记录。** `docs/verification.md` 分开列自动测试、原生 UI 检查、真实账号检查及未验证项。README 说明仅管理默认文件认证、外部客户端需自行退出、删除当前保存记录不退出 App、取消添加后选择原账号恢复、无自动回滚和源码构建用法。真实 UI/账号验收尚未做时明确写未验证，不把 mock 的 PASS 当实际登录成功。
 - [ ] **Step 6: 做经用户安排的真实验收。** 先在真实 Codex 已运行时启动 CodeXwitch，核对菜单状态、自动保存和设置；这会保存真实凭据，必须在用户安排的验收环节进行。再在用户准备好退出本聊天所在 App 时验证添加 B、切回 A、原会话继续和已保存账号删除。不得在自动执行中为验收突然终止本聊天；不能协调这一步时保留待验收说明。
-- [ ] **Step 7: Commit。** `git add Resources scripts README.md docs/verification.md`，`git commit -m "build: package and document CodeXwitch"`。交付源码、.app 和实际验证记录；不推送远端或发布。
+- [x] **Step 7: Commit。** `git add Resources scripts README.md docs/verification.md`，`git commit -m "build: package and document CodeXwitch"`。交付源码、.app 和实际验证记录；不推送远端或发布。
 
 ## 已核实的接口事实
 
@@ -175,6 +175,6 @@ XCTAssertEqual(launchCount, 1)
 
 ## 自检与执行交接
 
-设计的自动保存、外部启动、两秒刷新、删除排除、单 App 添加/切换、失败提示、设置 UI、权限及交付分别由 Task 1–4 覆盖。Review Focus 五项均已落实到具名测试；接口在相邻任务保持一致。没有产品实现、真实账号导入或 App 退出发生。
+设计的自动保存、外部启动、两秒刷新、删除排除、单 App 添加/切换、失败提示、设置 UI、权限及交付分别由 Task 1–4 覆盖。Review Focus 五项均已落实到具名测试；接口在相邻任务保持一致。实现及自动测试已完成；未导入真实账号或退出真实 Codex。Task 4 Step 6 保留为用户安排的真实验收。
 
-建议选择 Native：由主线程依次实现这四项，最终由独立 reviewer/tester 审阅和验证；任务共享同一套很小的接口，逐项新上下文实现收益较低。也可选择 Subagent-driven，由独立实现者和审阅者逐项交付。待用户审阅计划并选择执行方式后才进入实现。
+建议选择 Native：由主线程依次实现这四项，最终由独立 reviewer/tester 审阅和验证；任务共享同一套很小的接口，逐项新上下文实现收益较低。也可选择 Subagent-driven，由独立实现者和审阅者逐项交付。用户已选择 Native；实现已完成，交付和真实验收状态见 docs/verification.md。
