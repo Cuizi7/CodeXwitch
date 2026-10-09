@@ -1,11 +1,13 @@
 import AppKit
 import OSLog
+import Darwin
 
 @MainActor
 final class CodexApplication: AppLifecycle {
     private let bundleIdentifier: String
     private let quitTimeout: TimeInterval
     private let applicationLookup: (String) -> [NSRunningApplication]
+    private let processExists: (pid_t) -> Bool
     private var rememberedURL: URL?
     private var running: [NSRunningApplication] {
         applicationLookup(bundleIdentifier).filter { !$0.isTerminated }
@@ -14,35 +16,48 @@ final class CodexApplication: AppLifecycle {
     init(bundleIdentifier: String = "com.openai.codex", quitTimeout: TimeInterval = 60,
          applicationLookup: @escaping (String) -> [NSRunningApplication] = {
              NSRunningApplication.runningApplications(withBundleIdentifier: $0)
+         }, processExists: @escaping (pid_t) -> Bool = { pid in
+             guard pid > 0 else { return true }
+             // Signal 0 only probes this PID. Only ESRCH establishes absence.
+             return kill(pid, 0) == 0 || errno != ESRCH
          }) {
         self.bundleIdentifier = bundleIdentifier
         self.quitTimeout = quitTimeout
         self.applicationLookup = applicationLookup
+        self.processExists = processExists
     }
     func quit() async throws {
         let attempt = UUID().uuidString
         let started = ProcessInfo.processInfo.systemUptime
         let applications = running
+        let applicationPIDs = applications.map(\.processIdentifier)
         rememberedURL = applications.first?.bundleURL ?? rememberedURL
         Diagnostics.lifecycle.notice("quit.begin attempt=\(attempt, privacy: .public) bundle=\(self.bundleIdentifier, privacy: .public) timeout_s=\(self.quitTimeout, privacy: .public) captured=\(self.describe(applications), privacy: .public)")
-        for app in applications where !app.isTerminated {
+        for (app, pid) in zip(applications, applicationPIDs) where !app.isTerminated {
             let accepted = app.terminate()
-            Diagnostics.lifecycle.notice("quit.request attempt=\(attempt, privacy: .public) pid=\(app.processIdentifier, privacy: .public) accepted=\(accepted, privacy: .public)")
+            Diagnostics.lifecycle.notice("quit.request attempt=\(attempt, privacy: .public) pid=\(pid, privacy: .public) accepted=\(accepted, privacy: .public)")
             guard accepted else {
-                Diagnostics.lifecycle.error("quit.refused attempt=\(attempt, privacy: .public) pid=\(app.processIdentifier, privacy: .public)")
+                Diagnostics.lifecycle.error("quit.refused attempt=\(attempt, privacy: .public) pid=\(pid, privacy: .public)")
                 throw AppError.quitRefused
             }
         }
         let deadline = ProcessInfo.processInfo.systemUptime + quitTimeout
         var lastSnapshot = ""
         var nextSample = started
-        // Captured AppKit wrappers can stay stale after termination; use the current list.
-        while isRunning {
+        // AppKit can retain stale objects or briefly omit an exiting app. Confirm
+        // both the current list and disappearance of the PIDs we asked to quit.
+        while true {
             let now = ProcessInfo.processInfo.systemUptime
             let captured = describe(applications)
-            let fresh = describe(running)
-            let snapshot = "captured=[\(captured)] fresh=[\(fresh)]"
+            let current = running
+            let fresh = describe(current)
+            let alivePIDs = applicationPIDs.filter(processExists)
+            let snapshot = "captured=[\(captured)] fresh=[\(fresh)] alive_pids=\(alivePIDs)"
             let elapsed = Int((now - started) * 1000)
+            if current.isEmpty && alivePIDs.isEmpty {
+                Diagnostics.lifecycle.notice("quit.completed attempt=\(attempt, privacy: .public) elapsed_ms=\(elapsed, privacy: .public) \(snapshot, privacy: .public)")
+                break
+            }
             if snapshot != lastSnapshot || now >= nextSample {
                 Diagnostics.lifecycle.notice("quit.wait attempt=\(attempt, privacy: .public) elapsed_ms=\(elapsed, privacy: .public) \(snapshot, privacy: .public)")
                 lastSnapshot = snapshot
@@ -54,8 +69,6 @@ final class CodexApplication: AppLifecycle {
             }
             try await Task.sleep(nanoseconds: 100_000_000)
         }
-        let elapsed = Int((ProcessInfo.processInfo.systemUptime - started) * 1000)
-        Diagnostics.lifecycle.notice("quit.completed attempt=\(attempt, privacy: .public) elapsed_ms=\(elapsed, privacy: .public) captured=\(self.describe(applications), privacy: .public) fresh=\(self.describe(self.running), privacy: .public)")
     }
     private func describe(_ applications: [NSRunningApplication]) -> String {
         applications.map { "pid=\($0.processIdentifier),terminated=\($0.isTerminated)" }.joined(separator: ";")
@@ -70,9 +83,9 @@ final class CodexApplication: AppLifecycle {
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.createsNewApplicationInstance = false
         configuration.activates = true
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+        let launchedPID = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<pid_t, any Error>) in
             NSWorkspace.shared.openApplication(at: url, configuration: configuration) { application, error in
-                if application != nil && error == nil { continuation.resume() }
+                if let application, error == nil { continuation.resume(returning: application.processIdentifier) }
                 else {
                     let failure = error as NSError?
                     Diagnostics.lifecycle.error("launch.failed domain=\(failure?.domain ?? "unknown", privacy: .public) code=\(failure?.code ?? 0, privacy: .public)")
@@ -80,7 +93,7 @@ final class CodexApplication: AppLifecycle {
                 }
             }
         }
-        Diagnostics.lifecycle.notice("launch.completed fresh=\(self.describe(self.running), privacy: .public)")
+        Diagnostics.lifecycle.notice("launch.completed returned_pid=\(launchedPID, privacy: .public) fresh=\(self.describe(self.running), privacy: .public)")
     }
     func show() async throws {
         guard let app = running.first else { try await launch(); return }

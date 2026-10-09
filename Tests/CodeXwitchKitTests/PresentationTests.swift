@@ -54,6 +54,20 @@ final class PresentationTests: XCTestCase {
         menu.rebuild()
         XCTAssertFalse(menu.menu.items.contains { $0.title == "请在 Codex 中确认退出（最多等待 60 秒）" })
     }
+    func testMenuShowsStartingUntilRelaunchCompletes() async throws {
+        let (d, _, app, s, _, b) = try setup(); defer { withExtendedLifetime(d) {} }
+        let menu = MenuController(switcher: s, openSettings: {}, quitManager: {})
+        app.holdLaunch = true
+        let operation = Task { await s.switchTo(b.account.id) }
+        while app.launchContinuation == nil { await Task.yield() }
+        menu.rebuild()
+        XCTAssertEqual(menu.menu.items.first?.title, "正在启动 Codex…")
+        XCTAssertFalse(menu.menu.items.contains { $0.title == "请在 Codex 中确认退出（最多等待 60 秒）" })
+        XCTAssertFalse(try XCTUnwrap(menu.menu.items.first { $0.title == "添加账号…" }).isEnabled)
+        app.launchContinuation?.resume(); await operation.value
+        menu.rebuild()
+        XCTAssertEqual(menu.menu.items.first?.title, "Codex：运行中")
+    }
     func testSettingsRowsRefreshOnReopen() async throws {
         let (d, _, _, s, _, b) = try setup(); defer { withExtendedLifetime(d) {} }
         let settings = SettingsWindowController(switcher: s, confirmDeletion: { _ in true })

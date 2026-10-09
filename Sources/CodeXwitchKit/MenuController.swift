@@ -21,7 +21,7 @@ final class MenuController: NSObject, NSMenuDelegate {
         menu.removeAllItems()
         let state = switcher.state
         let status = add(state.isWaitingForQuit ? "Codex：等待退出…" :
-                         state.isBusy ? "Codex：正在处理…" : "Codex：\(state.isRunning ? "运行中" : "未运行")")
+                         state.isBusy ? (state.progressText ?? "Codex：正在处理…") : "Codex：\(state.isRunning ? "运行中" : "未运行")")
         status.image = NSImage(size: NSSize(width: 10, height: 10), flipped: false) { rect in
             (state.isRunning ? NSColor.systemGreen : NSColor.secondaryLabelColor).setFill()
             NSBezierPath(ovalIn: rect.insetBy(dx: 1, dy: 1)).fill()

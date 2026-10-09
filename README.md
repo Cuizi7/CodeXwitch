@@ -29,6 +29,8 @@ open build/CodeXwitch.app
 
 切换和添加会正常退出官方 App，请先完成正在运行的任务。等待期间菜单显示“等待退出”和确认提示；如果 Codex 弹出退出确认，请在 Codex 中处理。Codex 拒绝退出或等待超过 60 秒时，操作停止，活动认证不会修改；确认并退出后可重试。提前退出就立即继续，无需等满 60 秒。读写或启动失败时菜单/原生提示显示失败步骤；账号快照保留，可重试，没有自动回滚。App 未运行而磁盘仍有当前账号时，菜单提供“启动 Codex”，可直接重试启动而不回放旧凭据。
 
+操作时菜单首行显示当前阶段：准备账号、等待 Codex 退出、保存账号、切换账号或准备登录、正在启动 Codex。等待退出期间附带确认提示，操作完成或失败后恢复运行状态。
+
 ## 支持范围与本地数据
 
 第一版针对默认 `~/.codex`、文件认证、原安装 App（bundle ID `com.openai.codex`）。支持普通配置中根级 `cli_auth_credentials_store = "file"` 或默认值；keyring、auto、ephemeral、无法判断的配置会报错，不修改 `config.toml`。自定义 CODEX_HOME、启动参数、复杂/托管配置和 API-key 认证不在本版范围内。
@@ -45,9 +47,9 @@ open build/CodeXwitch.app
 /usr/bin/log show --last 30m --info --style compact --predicate 'subsystem == "local.codexwitch.app"'
 ```
 
-退出相关日志包含随机 attempt ID、PID、terminate 请求结果、耗时、原对象 captured 与重新枚举 fresh 的退出状态、完成或超时判定。等待时状态变化或约每秒记录一次；系统 launch/terminate 通知即使在切换忙碌期间也记录。操作日志包含类型、失败阶段和错误类型，不包含邮箱、账号 ID、token 或认证文件内容。
+退出相关日志包含随机 attempt ID、PID、terminate 请求结果、耗时、原对象 captured 与重新枚举 fresh 的退出状态、仍存在的原主进程 alive_pids、完成或超时判定；启动完成记录系统实际返回的 returned_pid。等待时状态变化或约每秒记录一次；系统 launch/terminate 通知即使在切换忙碌期间也记录。操作日志包含类型、失败阶段和错误类型，不包含邮箱、账号 ID、token 或认证文件内容。
 
-更新后需重新启动 CodeXwitch 才会启用新版。0.1.2 根据最新系统 App 列表判断退出完成，避免旧进程对象的状态未更新导致误报；退出等待上限为 60 秒。
+更新后需重新启动 CodeXwitch 才会启用新版。0.1.3 同时检查最新系统 App 列表和退出前捕获的主进程 PID，避免旧对象状态未更新造成超时，也避免列表短暂为空时过早重启。PID 检查不发送信号、不强制结束进程，不扫描 VS Code 或 CLI；退出等待上限仍为 60 秒。
 
 ## 设计与验证
 

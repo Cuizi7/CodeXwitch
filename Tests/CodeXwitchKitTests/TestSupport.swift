@@ -74,7 +74,9 @@ final class FakeApp: AppLifecycle {
     var failQuit = false
     var failLaunch = false
     var holdQuit = false
+    var holdLaunch = false
     var quitContinuation: CheckedContinuation<Void, Never>?
+    var launchContinuation: CheckedContinuation<Void, Never>?
     var launchCount = 0
     init(trace: EventTrace) { self.trace = trace }
     func quit() async throws {
@@ -86,6 +88,7 @@ final class FakeApp: AppLifecycle {
     func launch() async throws {
         trace.events.append("launch"); launchCount += 1
         if failLaunch { throw StoreError.write }
+        if holdLaunch { await withCheckedContinuation { launchContinuation = $0 } }
         isRunning = true
     }
     func show() async throws { trace.events.append("show") }
