@@ -142,16 +142,16 @@ XCTAssertEqual(launchCount, 1)
 - `@MainActor final class SettingsWindowController: NSWindowController`：`init(switcher: Switcher, confirmDeletion: @escaping (Account) -> Bool)`、`reload()`；标准 showWindow 方法显示同一个窗口。
 - `@MainActor final class AppDelegate: NSObject, NSApplicationDelegate` 组装真实依赖；`@MainActor public func runCodeXwitch()` 创建并持有 delegate，设置 accessory 激活策略，然后运行 NSApplication。
 
-- [ ] **Step 1: 写失败展示测试。** 初始化 NSApplication 仅用于 AppKit 控件，不使用真实 AppLifecycle 或真实 home。`testMenuUsesExternalStatusAndAlternatives` 断言菜单首项为 `Codex：运行中`，包含 `当前：a@example.com` 和 B，不重复把 A 列为目标；尾部顺序为 `添加账号…`、`刷新状态`、`设置…`、`退出菜单栏程序`，没有“保存账号”。`testBusyMenuDisablesMutation` 断言切换、添加和设置删除动作禁用。
+- [x] **Step 1: 写失败展示测试。** 初始化 NSApplication 仅用于 AppKit 控件，不使用真实 AppLifecycle 或真实 home。`testMenuUsesExternalStatusAndAlternatives` 断言菜单首项为 `Codex：运行中`，包含 `当前：a@example.com` 和 B，不重复把 A 列为目标；尾部顺序为 `添加账号…`、`刷新状态`、`设置…`、`退出菜单栏程序`，没有“保存账号”。`testBusyMenuDisablesMutation` 断言切换、添加和设置删除动作禁用。
 
 `testSettingsRowsRefreshOnReopen`：显示 A/B 后删除 B，再 reload，窗口只显示 A；title == `CodeXwitch 设置`。`testDeleteConfirmationFalseHasNoSideEffect`：注入返回 false 的确认 closure，列表与认证不变；true 时只有私有快照删除。`testUnknownEmailAndReadErrorAreDisplayable`：缺邮箱使用统一文案；坏认证显示读取错误而非伪造 A；空列表提供“暂无已保存账号”。`testQuitManagerDoesNotQuitCodex`：注入 quitManager 假动作，只记录程序退出请求，不调用 AppLifecycle.quit。
 
-- [ ] **Step 2: 确认失败。** Run `swift test --filter PresentationTests`；Expected：展示接口或断言 FAIL，不启动真实 Codex。
-- [ ] **Step 3: 实现 CodexApplication。** 使用 NSRunningApplication.runningApplications(withBundleIdentifier:) 枚举当前原 App，不依赖本程序启动记录。quit 对匹配实例请求 terminate，最多等待 10 秒并检查 isTerminated/重新枚举；请求返回 true 不是退出证据，拒绝/超时抛错，不 forceTerminate。App 路径优先来自匹配实例 bundleURL，否则 NSWorkspace.urlForApplication；异步 openApplication 的 completion 回到 MainActor。show 激活现有 App，未运行时 launch。不读取其他进程环境、不扫描 CLI/IDE占用。
-- [ ] **Step 4: 实现菜单和设置。** 原生 NSStatusItem + NSMenu，图标使用 SF Symbol `person.2`；邮箱和身份都来自 state。设置窗口采用原生控件、约 570×390 pt、两行列表视觉参照已批准图片。每行“删除”触发 NSAlert，按钮“取消”“删除”，使用 spec 中的完整确认文字；帮助文案沿用原型。不加入其他设置、保存按钮或配额图表。错误使用不含凭据的原生提示。
-- [ ] **Step 5: 接入刷新和入口。** AppDelegate 创建默认 auth/config URL 和 Application Support 目录；立即 refresh。使用约 2 秒 Timer，Workspace 自身 notificationCenter 的 didLaunch/didTerminateApplicationNotification，menuWillOpen 时 refresh。一个 onChange 回调同时更新菜单和已打开设置；退出时取消 timer/observer，不向 Codex 发退出请求。自动保存失败保留可见错误，并在下次轮询重试，不仅按 mtime 判定成功。
-- [ ] **Step 6: 确认通过。** Run `swift test --filter PresentationTests`、`swift build`；Expected：展示测试全部 PASS、应用入口编译成功。新增 `testMissingOfficialAppReportsError` 使用不存在的测试 bundle ID，报未找到 App，绝不启动当前 Codex。
-- [ ] **Step 7: Commit。** `git add Package.swift Sources Tests/CodeXwitchKitTests/PresentationTests.swift`，`git commit -m "feat: add native menu and account settings"`。
+- [x] **Step 2: 确认失败。** Run `swift test --filter PresentationTests`；Expected：展示接口或断言 FAIL，不启动真实 Codex。
+- [x] **Step 3: 实现 CodexApplication。** 使用 NSRunningApplication.runningApplications(withBundleIdentifier:) 枚举当前原 App，不依赖本程序启动记录。quit 对匹配实例请求 terminate，最多等待 10 秒并检查 isTerminated/重新枚举；请求返回 true 不是退出证据，拒绝/超时抛错，不 forceTerminate。App 路径优先来自匹配实例 bundleURL，否则 NSWorkspace.urlForApplication；异步 openApplication 的 completion 回到 MainActor。show 激活现有 App，未运行时 launch。不读取其他进程环境、不扫描 CLI/IDE占用。
+- [x] **Step 4: 实现菜单和设置。** 原生 NSStatusItem + NSMenu，图标使用 SF Symbol `person.2`；邮箱和身份都来自 state。设置窗口采用原生控件、约 570×390 pt、两行列表视觉参照已批准图片。每行“删除”触发 NSAlert，按钮“取消”“删除”，使用 spec 中的完整确认文字；帮助文案沿用原型。不加入其他设置、保存按钮或配额图表。错误使用不含凭据的原生提示。
+- [x] **Step 5: 接入刷新和入口。** AppDelegate 创建默认 auth/config URL 和 Application Support 目录；立即 refresh。使用约 2 秒 Timer，Workspace 自身 notificationCenter 的 didLaunch/didTerminateApplicationNotification，menuWillOpen 时 refresh。一个 onChange 回调同时更新菜单和已打开设置；退出时取消 timer/observer，不向 Codex 发退出请求。自动保存失败保留可见错误，并在下次轮询重试，不仅按 mtime 判定成功。
+- [x] **Step 6: 确认通过。** Run `swift test --filter PresentationTests`、`swift build`；Expected：展示测试全部 PASS、应用入口编译成功。新增 `testMissingOfficialAppReportsError` 使用不存在的测试 bundle ID，报未找到 App，绝不启动当前 Codex。
+- [x] **Step 7: Commit。** `git add Package.swift Sources Tests/CodeXwitchKitTests/PresentationTests.swift`，`git commit -m "feat: add native menu and account settings"`。
 
 ## Task 4: 打包、集成验证与交付
 

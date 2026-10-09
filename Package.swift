@@ -3,9 +3,11 @@ import PackageDescription
 let package = Package(
     name: "CodeXwitch",
     platforms: [.macOS(.v13)],
-    products: [.library(name: "CodeXwitchKit", targets: ["CodeXwitchKit"])],
+    products: [.library(name: "CodeXwitchKit", targets: ["CodeXwitchKit"]),
+               .executable(name: "CodeXwitch", targets: ["CodeXwitch"])],
     targets: [
         .target(name: "CodeXwitchKit"),
+        .executableTarget(name: "CodeXwitch", dependencies: ["CodeXwitchKit"]),
         .testTarget(name: "CodeXwitchKitTests", dependencies: ["CodeXwitchKit"])
     ]
 )
