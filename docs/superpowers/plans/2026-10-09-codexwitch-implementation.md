@@ -67,7 +67,7 @@
 - `AccountStore.init(authURL: URL, directory: URL, configURL: URL)`；`current/install/clearCurrent` 先检查文件认证配置。不存在的 config 或未配置 store 按 file；显式非 file 或无法确定时抛出不含配置内容的错误。
 - 测试 helper：`fixture(email: String = "a@example.com", user: String = "user-a", workspace: String = "workspace-a", access: String = "fake-access-a", tokenAccountID: String? = nil) -> Data`，生成虚构三段 JWT；`TestDirectory.init() throws` 提供 `url: URL` 并在销毁时清理。所有错误说明均不包含原始 JSON/token。
 
-- [ ] **Step 1: 建立 SwiftPM 库/测试 target，并写失败测试。** 为使库 target 存在，Credentials.swift 暂时仅含 `import Foundation`；此阶段不创建应用入口或启动 UI。测试覆盖以下确切断言：
+- [x] **Step 1: 建立 SwiftPM 库/测试 target，并写失败测试。** 为使库 target 存在，Credentials.swift 暂时仅含 `import Foundation`；此阶段不创建应用入口或启动 UI。测试覆盖以下确切断言：
 
 ```swift
 // CredentialsTests.testSameEmailDifferentWorkspaces
@@ -89,11 +89,11 @@ XCTAssertEqual(try Credentials.parse(fixture()).account.id,
 
 `testPrivatePermissionsAndRestrictedWrites`：目录 POSIX 权限等于 `0o700`，快照、排除记录与新活动认证等于 `0o600`；在测试 home 写入哨兵 config/session/数据库文件，存档/安装/清空后它们逐字节相同。`testCredentialBackendPolicy`：未配置/file 可读，keyring/auto/ephemeral/未知值拒绝，注释中的示例不改变判断。
 
-- [ ] **Step 2: 确认测试失败。** Run `swift test --filter CredentialsTests`、`swift test --filter AccountStoreTests`；Expected：缺少上述类型或功能造成编译/断言失败，记录为 RED，不把构建环境错误算作 RED。
-- [ ] **Step 3: 实现上述接口。** JWT 只解码本地元数据，不验证签名或宣称登录有效；要求非空 id/access/refresh token。用户取 auth namespace.chatgpt_user_id，缺失时取 sub；workspace 取 tokens.account_id，缺失时取 auth namespace.chatgpt_account_id；key 为用户和 workspace 用 NUL 分隔后 SHA-256。保留完整原始文件，不重建 auth JSON、不依据过期 access token 丢弃可刷新的账号。
-- [ ] **Step 4: 完成最小文件存储。** `capture` 尊重当前排除，另一有效身份才解除；成功写完才算保存。原子写入使用同目录临时文件，创建时即 0600，rename 替换；这里只是避免半份文件，没有日志或恢复流程。`accounts()` 按邮箱/id 稳定排序；损坏快照不作为切换目标，合法快照继续可列出；`credential(for:)` 对损坏目标报错。配置检查只支持普通配置中的根级 store 字段、单双引号和注释；字段出现在不支持的配置结构或有矛盾定义时明确拒绝，不复刻完整 TOML/managed 配置优先级。
-- [ ] **Step 5: 确认通过。** Run `swift test --filter CredentialsTests`、`swift test --filter AccountStoreTests`；Expected：上述测试全部 PASS。补 `testCorruptSavedFileDoesNotHideValidAccounts`：一份损坏快照不使合法 A 消失。
-- [ ] **Step 6: Commit。** `git add Package.swift Sources/CodeXwitchKit/Credentials.swift Sources/CodeXwitchKit/AccountStore.swift Tests/CodeXwitchKitTests`，`git commit -m "feat: manage local account credentials"`。
+- [x] **Step 2: 确认测试失败。** Run `swift test --filter CredentialsTests`、`swift test --filter AccountStoreTests`；Expected：缺少上述类型或功能造成编译/断言失败，记录为 RED，不把构建环境错误算作 RED。
+- [x] **Step 3: 实现上述接口。** JWT 只解码本地元数据，不验证签名或宣称登录有效；要求非空 id/access/refresh token。用户取 auth namespace.chatgpt_user_id，缺失时取 sub；workspace 取 tokens.account_id，缺失时取 auth namespace.chatgpt_account_id；key 为用户和 workspace 用 NUL 分隔后 SHA-256。保留完整原始文件，不重建 auth JSON、不依据过期 access token 丢弃可刷新的账号。
+- [x] **Step 4: 完成最小文件存储。** `capture` 尊重当前排除，另一有效身份才解除；成功写完才算保存。原子写入使用同目录临时文件，创建时即 0600，rename 替换；这里只是避免半份文件，没有日志或恢复流程。`accounts()` 按邮箱/id 稳定排序；损坏快照不作为切换目标，合法快照继续可列出；`credential(for:)` 对损坏目标报错。配置检查只支持普通配置中的根级 store 字段、单双引号和注释；字段出现在不支持的配置结构或有矛盾定义时明确拒绝，不复刻完整 TOML/managed 配置优先级。
+- [x] **Step 5: 确认通过。** Run `swift test --filter CredentialsTests`、`swift test --filter AccountStoreTests`；Expected：上述测试全部 PASS。补 `testCorruptSavedFileDoesNotHideValidAccounts`：一份损坏快照不使合法 A 消失。
+- [x] **Step 6: Commit。** `git add Package.swift Sources/CodeXwitchKit/Credentials.swift Sources/CodeXwitchKit/AccountStore.swift Tests/CodeXwitchKitTests`，`git commit -m "feat: manage local account credentials"`。
 
 ## Task 2: 简单切换、添加与删除操作
 
