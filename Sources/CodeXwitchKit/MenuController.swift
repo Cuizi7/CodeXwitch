@@ -30,6 +30,11 @@ final class MenuController: NSObject, NSMenuDelegate {
         if let account = state.current { current = account.displayName }
         else { current = state.error == nil ? "未登录" : "无法读取账号" }
         add("当前：\(current)")
+        if !state.isRunning, let account = state.current {
+            menu.addItem(.separator())
+            let item = add("启动 Codex", action: #selector(switchAccount(_:)), enabled: !state.isBusy)
+            item.representedObject = account.id
+        }
         let alternatives = state.accounts.filter { $0.id != state.current?.id }
         if !alternatives.isEmpty {
             menu.addItem(.separator()); add("切换账号")

@@ -38,6 +38,8 @@ final class RecordingRepository: AccountRepository {
     let trace: EventTrace
     var failCapture = false
     var failInstall = false
+    var failClear = false
+    var failForget = false
     init(store: AccountStore, trace: EventTrace) { self.store = store; self.trace = trace }
     func current() throws -> Credentials? { trace.events.append("read-current"); return try store.current() }
     func accounts() throws -> [Account] { try store.accounts() }
@@ -48,13 +50,21 @@ final class RecordingRepository: AccountRepository {
         try store.capture(c)
     }
     func remove(_ id: String, currentID: String?) throws { trace.events.append("remove-saved"); try store.remove(id, currentID: currentID) }
-    func forgetSuppression() throws { trace.events.append("forget-suppression"); try store.forgetSuppression() }
+    func forgetSuppression() throws {
+        trace.events.append("forget-suppression")
+        if failForget { throw StoreError.write }
+        try store.forgetSuppression()
+    }
     func install(_ c: Credentials) throws {
         trace.events.append("install-target")
         if failInstall { throw StoreError.write }
         try store.install(c)
     }
-    func clearCurrent() throws { trace.events.append("clear-current"); try store.clearCurrent() }
+    func clearCurrent() throws {
+        trace.events.append("clear-current")
+        if failClear { throw StoreError.write }
+        try store.clearCurrent()
+    }
 }
 
 @MainActor

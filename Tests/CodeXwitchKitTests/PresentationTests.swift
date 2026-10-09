@@ -105,6 +105,19 @@ final class PresentationTests: XCTestCase {
         XCTAssertLessThan(visible.maxY - emailRect.maxY, 40, "First account should begin at the top of the list")
         XCTAssertLessThan(visible.maxX - buttonRect.maxX, 24, "Delete should align with the right edge")
     }
+    func testStoppedAppCanLaunchCurrentAccountFromMenu() async throws {
+        let (d, store, app, s, a, _) = try setup(); defer { withExtendedLifetime(d) {} }
+        app.isRunning = false; s.refresh()
+        let controller = MenuController(switcher: s, openSettings: {}, quitManager: {})
+        let index = try XCTUnwrap(controller.menu.items.firstIndex { $0.title == "启动 Codex" })
+        XCTAssertTrue(controller.menu.items[index].isEnabled)
+        XCTAssertEqual(controller.menu.items[index].representedObject as? String, a.account.id)
+        controller.menu.performActionForItem(at: index)
+        for _ in 0..<100 where !app.isRunning { await Task.yield() }
+        XCTAssertTrue(app.isRunning)
+        XCTAssertEqual(try store.current()?.data, a.data)
+        XCTAssertFalse(app.trace.events.contains("quit"))
+    }
     private func allViews(_ view: NSView) -> [NSView] { [view] + view.subviews.flatMap(allViews) }
     private func labels(_ view: NSView) -> [String] {
         (view as? NSTextField).map { [$0.stringValue] } ?? view.subviews.flatMap(labels)

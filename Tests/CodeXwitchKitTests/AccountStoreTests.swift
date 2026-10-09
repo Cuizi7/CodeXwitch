@@ -79,6 +79,21 @@ final class AccountStoreTests: XCTestCase {
         XCTAssertEqual(try store.accounts(), [a.account])
         XCTAssertThrowsError(try store.credential(for: String(repeating: "b", count: 64)))
     }
+    func testEscapedConfigKeyRejectsReadInstallAndRemoval() throws {
+        let d = try TestDirectory(), store = d.store(), a = try Credentials.parse(fixture())
+        let b = try Credentials.parse(fixture(email: "b@example.com", user: "user-b"))
+        let configs = [#""cli_auth_credentials_stor\u0065" = "keyring""#,
+                       #""cl\u0069_auth_credentials_store" = "auto""#]
+        for config in configs {
+            try a.data.write(to: d.auth)
+            try Data(config.utf8).write(to: d.config)
+            XCTAssertThrowsError(try store.current())
+            XCTAssertThrowsError(try store.install(b))
+            XCTAssertEqual(try? Data(contentsOf: d.auth), a.data)
+            XCTAssertThrowsError(try store.clearCurrent())
+            XCTAssertEqual(try? Data(contentsOf: d.auth), a.data)
+        }
+    }
     private func permissions(_ url: URL) throws -> Int {
         (try FileManager.default.attributesOfItem(atPath: url.path)[.posixPermissions] as! NSNumber).intValue
     }

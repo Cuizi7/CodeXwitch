@@ -132,6 +132,9 @@ final class AccountStore: AccountRepository {
         var inTable = false, multiline = false, seen = false
         for raw in text.components(separatedBy: .newlines) {
             let line = stripComment(raw).trimmingCharacters(in: .whitespaces)
+            // Escaped quoted keys require a full TOML decoder; do not assume file mode.
+            if !multiline, line.hasPrefix("\""), let equals = line.firstIndex(of: "="),
+               line[..<equals].contains("\\") { throw StoreError.backend }
             let hasKey = line.contains("cli_auth_credentials_store")
             let tripleCount = line.components(separatedBy: "\"\"\"").count - 1
                 + line.components(separatedBy: "'''").count - 1

@@ -12,6 +12,20 @@ final class SwitcherTests: XCTestCase {
         switcher.refresh(); trace.events = []
         return (d, store, repo, app, switcher, a, b, trace)
     }
+    func testAddClearFailureStopsLaunchAndPreservesCurrent() async throws {
+        let (d, store, repo, _, s, a, _, trace) = try setup(); defer { withExtendedLifetime(d) {} }
+        repo.failClear = true; await s.addAccount()
+        XCTAssertFalse(trace.events.contains("forget-suppression")); XCTAssertFalse(trace.events.contains("launch"))
+        XCTAssertEqual(try store.current()?.data, a.data); XCTAssertFalse(s.state.isBusy)
+        XCTAssertTrue(s.state.error?.contains("移除活动认证") == true)
+    }
+    func testAddForgetFailureStopsLaunchAndRetainsSavedAccounts() async throws {
+        let (d, store, repo, _, s, _, _, trace) = try setup(); defer { withExtendedLifetime(d) {} }
+        repo.failForget = true; await s.addAccount()
+        XCTAssertFalse(trace.events.contains("launch")); XCTAssertNil(try store.current())
+        XCTAssertEqual(try store.accounts().count, 2); XCTAssertFalse(s.state.isBusy)
+        XCTAssertTrue(s.state.error?.contains("准备重新登录") == true)
+    }
     func testSwitchOrder() async throws {
         let (d, store, _, app, s, _, b, trace) = try setup(); defer { withExtendedLifetime(d) {} }
         await s.switchTo(b.account.id)
