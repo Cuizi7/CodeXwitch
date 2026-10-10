@@ -30,6 +30,11 @@ final class SettingsWindowController: NSWindowController {
         let help = NSTextField(wrappingLabelWithString: "删除仅移除本机保存的账号，不会退出 Codex。\n删除当前账号后，不会立即自动保存回来。")
         help.font = .systemFont(ofSize: 12)
         help.textColor = .secondaryLabelColor
+        let versionNumber = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "开发版"
+        let version = NSTextField(labelWithString: "CodeXwitch \(versionNumber)")
+        version.identifier = NSUserInterfaceItemIdentifier("appVersion")
+        version.font = .systemFont(ofSize: 12)
+        version.textColor = .secondaryLabelColor
         let scroll = NSScrollView()
         scroll.hasVerticalScroller = true
         scroll.drawsBackground = false
@@ -58,7 +63,7 @@ final class SettingsWindowController: NSWindowController {
             list.addArrangedSubview(empty)
             list.edgeInsets = NSEdgeInsets(top: 24, left: 16, bottom: 24, right: 16)
         }
-        for view in [title, subtitle, scroll, help] {
+        for view in [title, subtitle, scroll, help, version] {
             view.translatesAutoresizingMaskIntoConstraints = false
             content.addSubview(view)
         }
@@ -73,7 +78,9 @@ final class SettingsWindowController: NSWindowController {
             scroll.bottomAnchor.constraint(equalTo: help.topAnchor, constant: -20),
             help.leadingAnchor.constraint(equalTo: title.leadingAnchor),
             help.trailingAnchor.constraint(equalTo: scroll.trailingAnchor),
-            help.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -24),
+            help.bottomAnchor.constraint(equalTo: version.topAnchor, constant: -12),
+            version.trailingAnchor.constraint(equalTo: scroll.trailingAnchor),
+            version.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -20),
             list.topAnchor.constraint(equalTo: scroll.contentView.topAnchor),
             list.leadingAnchor.constraint(equalTo: scroll.contentView.leadingAnchor),
             list.widthAnchor.constraint(equalTo: scroll.contentView.widthAnchor)

@@ -33,6 +33,8 @@ open build/CodeXwitch.app
 
 0.1.4 起使用统一的圆角六边形图标。菜单栏的交叉箭头表示运行中，空心圆表示未运行，旋转内圈表示处理中（包含等待退出），感叹号表示异常。处理时外框固定，启用系统“减少动态效果”时内圈不旋转。图标定稿及矢量源见 [Resources/Icons](Resources/Icons/README.md)。
 
+下拉菜单顶部显示 CodeXwitch 名称，设置窗口底部显示当前程序版本。
+
 ## 支持范围与本地数据
 
 第一版针对默认 `~/.codex`、文件认证、原安装 App（bundle ID `com.openai.codex`）。支持普通配置中根级 `cli_auth_credentials_store = "file"` 或默认值；keyring、auto、ephemeral、无法判断的配置会报错，不修改 `config.toml`。自定义 CODEX_HOME、启动参数、复杂/托管配置和 API-key 认证不在本版范围内。

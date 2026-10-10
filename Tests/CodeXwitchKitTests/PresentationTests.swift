@@ -16,7 +16,9 @@ final class PresentationTests: XCTestCase {
         let (d, _, _, s, a, b) = try setup(); defer { withExtendedLifetime(d) {} }
         let menu = MenuController(switcher: s, openSettings: {}, quitManager: {})
         let items = menu.menu.items
-        XCTAssertEqual(items.first?.title, "Codex：运行中")
+        XCTAssertEqual(items.first?.title, "CodeXwitch")
+        XCTAssertFalse(try XCTUnwrap(items.first).isEnabled)
+        XCTAssertTrue(items.contains { $0.title == "Codex：运行中" })
         XCTAssertTrue(items.contains { $0.title == "当前：a@example.com" })
         XCTAssertTrue(items.contains { $0.title == "b@example.com" && $0.representedObject as? String == b.account.id })
         XCTAssertFalse(items.contains { $0.representedObject as? String == a.account.id })
@@ -31,7 +33,7 @@ final class PresentationTests: XCTestCase {
         app.holdQuit = true; let operation = Task { await s.switchTo(b.account.id) }
         while app.quitContinuation == nil { await Task.yield() }
         menu.rebuild(); settings.reload()
-        XCTAssertEqual(menu.menu.items.first?.title, "Codex：等待退出…")
+        XCTAssertTrue(menu.menu.items.contains { $0.title == "Codex：等待退出…" })
         XCTAssertTrue(menu.menu.items.contains { $0.title == "请在 Codex 中确认退出（最多等待 60 秒）" })
         XCTAssertFalse(try XCTUnwrap(menu.menu.items.first { $0.title == "添加账号…" }).isEnabled)
         XCTAssertFalse(try XCTUnwrap(menu.menu.items.first { $0.title == "b@example.com" }).isEnabled)
@@ -47,7 +49,7 @@ final class PresentationTests: XCTestCase {
         let operation = Task { await s.addAccount() }
         while app.quitContinuation == nil { await Task.yield() }
         menu.rebuild()
-        XCTAssertEqual(menu.menu.items.first?.title, "Codex：等待退出…")
+        XCTAssertTrue(menu.menu.items.contains { $0.title == "Codex：等待退出…" })
         XCTAssertTrue(menu.menu.items.contains { $0.title == "请在 Codex 中确认退出（最多等待 60 秒）" })
         XCTAssertEqual(try store.current()?.data, a.data)
         app.quitContinuation?.resume(); await operation.value
@@ -61,12 +63,12 @@ final class PresentationTests: XCTestCase {
         let operation = Task { await s.switchTo(b.account.id) }
         while app.launchContinuation == nil { await Task.yield() }
         menu.rebuild()
-        XCTAssertEqual(menu.menu.items.first?.title, "正在启动 Codex…")
+        XCTAssertTrue(menu.menu.items.contains { $0.title == "正在启动 Codex…" })
         XCTAssertFalse(menu.menu.items.contains { $0.title == "请在 Codex 中确认退出（最多等待 60 秒）" })
         XCTAssertFalse(try XCTUnwrap(menu.menu.items.first { $0.title == "添加账号…" }).isEnabled)
         app.launchContinuation?.resume(); await operation.value
         menu.rebuild()
-        XCTAssertEqual(menu.menu.items.first?.title, "Codex：运行中")
+        XCTAssertTrue(menu.menu.items.contains { $0.title == "Codex：运行中" })
     }
     func testSettingsRowsRefreshOnReopen() async throws {
         let (d, _, _, s, _, b) = try setup(); defer { withExtendedLifetime(d) {} }
@@ -142,6 +144,14 @@ final class PresentationTests: XCTestCase {
         let buttonRect = content.convert(button.bounds, from: button)
         XCTAssertLessThan(visible.maxY - emailRect.maxY, 40, "First account should begin at the top of the list")
         XCTAssertLessThan(visible.maxX - buttonRect.maxX, 24, "Delete should align with the right edge")
+        let version = try XCTUnwrap(all.compactMap { $0 as? NSTextField }.first { $0.identifier?.rawValue == "appVersion" })
+        XCTAssertTrue(version.stringValue.hasPrefix("CodeXwitch "))
+        let versionRect = content.convert(version.bounds, from: version)
+        let scrollRect = content.convert(scroll.bounds, from: scroll)
+        // NSTextField adds two points of frame padding outside its alignment rect.
+        let versionAlignment = content.convert(version.alignmentRect(forFrame: version.frame), from: version.superview)
+        XCTAssertEqual(versionAlignment.maxX, scrollRect.maxX, accuracy: 1, "Version text should align with the list's outer frame")
+        XCTAssertGreaterThanOrEqual(versionRect.minY, 19, "Version should remain inside the window footer")
     }
     func testStoppedAppCanLaunchCurrentAccountFromMenu() async throws {
         let (d, store, app, s, a, _) = try setup(); defer { withExtendedLifetime(d) {} }

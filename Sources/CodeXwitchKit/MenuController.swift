@@ -19,6 +19,11 @@ final class MenuController: NSObject, NSMenuDelegate {
     func menuWillOpen(_ menu: NSMenu) { switcher.refresh(); rebuild() }
     func rebuild() {
         menu.removeAllItems()
+        let name = add("CodeXwitch")
+        name.attributedTitle = NSAttributedString(string: "CodeXwitch", attributes: [
+            .font: NSFont.systemFont(ofSize: NSFont.systemFontSize, weight: .semibold)
+        ])
+        menu.addItem(.separator())
         let state = switcher.state
         let status = add(state.isWaitingForQuit ? "Codex：等待退出…" :
                          state.isBusy ? (state.progressText ?? "Codex：正在处理…") : "Codex：\(state.isRunning ? "运行中" : "未运行")")
