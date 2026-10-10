@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="Resources/Icons/app-icon-final.svg" width="104" height="104" alt="CodeXwitch 图标">
+  <img src="Resources/Icons/app-icon.svg" width="104" height="104" alt="CodeXwitch 图标">
 </p>
 
 # CodeXwitch
