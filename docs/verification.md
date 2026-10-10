@@ -25,7 +25,7 @@
 - 刷新令牌复用、登录授权过期与服务端账号/计费归属。
 - 多个共用认证的客户端之间的同步；这不属于当前支持范围。
 - 实机操作过程中切换系统“减少动态效果”设置。
-- Developer ID 签名、公证和公开发行流程。
+- Developer ID 签名和公证。
 
 用户曾在开发机手动确认账号切换行为正常；不将单次确认扩展为全部兼容性或安全保证。
 
@@ -40,4 +40,4 @@
 
 工作流使用 `macos-15`，执行完整测试、Release 打包、plist/签名/许可证/图标资源检查，并上传应用压缩包。官方 Actions 固定为完整提交 SHA，权限为只读，未设置发布或签名凭据。
 
-已通过 actionlint 检查及本机等价构建步骤验证；尚未配置 GitHub remote 或执行 hosted CI，第一次推送后仍需检查实际运行结果。CI 默认工具链中的旧版 SwiftPM 资源查找差异依据 [SwiftPM 6.1.2 源码](https://github.com/swiftlang/swift-package-manager/blob/swift-6.1.2-RELEASE/Sources/Build/BuildDescription/SwiftModuleBuildDescription.swift)核对，并通过上述目录迁移测试覆盖。
+已通过 actionlint 检查及本机等价构建步骤验证；托管 CI 的实际运行结果见 [GitHub Actions](https://github.com/Cuizi7/CodeXwitch/actions)。CI 默认工具链中的旧版 SwiftPM 资源查找差异依据 [SwiftPM 6.1.2 源码](https://github.com/swiftlang/swift-package-manager/blob/swift-6.1.2-RELEASE/Sources/Build/BuildDescription/SwiftModuleBuildDescription.swift)核对，并通过上述目录迁移测试覆盖。

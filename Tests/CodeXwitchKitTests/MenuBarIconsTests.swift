@@ -47,8 +47,10 @@ final class MenuBarIconsTests: XCTestCase {
                 let a = first.colorAt(x: x, y: y)?.alphaComponent ?? 0
                 let b = second.colorAt(x: x, y: y)?.alphaComponent ?? 0
                 if abs(a - b) > 1.0 / 255 {
-                    if hypot(CGFloat(x) - 39.5, CGFloat(y) - 39.5) > 19 { outerChanges += 1 }
-                    else { innerChanges += 1 }
+                    let radius = hypot(CGFloat(x) - 39.5, CGFloat(y) - 39.5)
+                    // PDF rasterization extends the spinner to 21 px; the frame starts at 26 px.
+                    if radius > 22 { outerChanges += 1 }
+                    else if radius <= 19 { innerChanges += 1 }
                 }
             }
         }
