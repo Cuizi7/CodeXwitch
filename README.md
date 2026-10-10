@@ -1,16 +1,38 @@
+<p align="center">
+  <img src="Resources/Icons/app-icon-final.svg" width="104" height="104" alt="CodeXwitch 图标">
+</p>
+
 # CodeXwitch
 
-Codex 账号切换器，一个简单的 macOS 菜单栏程序。
+**在同一个 Codex App 中，手动切换登录账号。**
 
-- 识别已经独立启动的官方 Codex，自动保存登录账号与更新后的凭据。
-- 点击备选账号，正常退出 Codex，切换 `auth.json`，再启动原 App。
-- 添加账号时，在原 App、原目录中进入未登录状态，直接完成官方登录。
-- 设置窗口支持删除已保存账号，包括当前账号的保存记录。
-- 继续使用原配置、项目、会话与数据库。退出 CodeXwitch 不退出 Codex。
+CodeXwitch 是一个原生 macOS 菜单栏工具。它保存本机已登录账号的凭据，在你选择另一个账号时，正常退出 Codex、替换认证文件，然后重新打开原来的 App。配置、项目和会话继续使用原目录。
+
+CodeXwitch 是独立的第三方项目，与 OpenAI 没有隶属或背书关系。它不自动按额度轮换账号，也不显示剩余额度。
+
+## 功能
+
+- 自动识别从 Dock、Finder 等其他入口启动的 Codex。
+- 登录后自动保存账号，并跟随磁盘中的凭据刷新更新保存记录。
+- 在下拉菜单中查看当前账号、选择备选账号，或启动已停止的 Codex。
+- 添加账号时在原 Codex App 中完成官方登录。
+- 在设置窗口中删除已保存账号，查看程序版本。
+- 显示准备、等待退出、切换和启动等操作阶段。
+
+| 菜单栏图标 | 状态 |
+|---|---|
+| 交叉箭头 | Codex 运行中 |
+| 空心圆 | Codex 未运行 |
+| 分段圆环 | 处理中，包括等待退出确认 |
+| 感叹号 | 操作或读取发生错误，打开菜单查看详情 |
+
+处理时只旋转内圈，六边形外框保持固定；系统开启“减少动态效果”时停止旋转。
 
 ## 构建与运行
 
-需要 macOS 13+、Swift 6 / Xcode Command Line Tools；无第三方依赖。
+需要 macOS、包含 Swift 6 工具链的 Xcode，以及已经安装的官方 Codex App。项目使用 SwiftPM 和 AppKit，没有第三方运行依赖。
+
+下载或克隆源码后，在项目根目录运行：
 
 ```sh
 swift test
@@ -18,49 +40,66 @@ bash scripts/build-app.sh
 open build/CodeXwitch.app
 ```
 
-脚本仅构建 `build/CodeXwitch.app`，不会自动启动或安装。产物是本机架构，使用本地 ad-hoc 签名；可将 `.app` 拖入 Applications 后自行打开。
+也可以将 `build/CodeXwitch.app` 移到 Applications 后打开。构建脚本只生成应用，不自动安装或启动；产物使用本机架构和 ad-hoc 签名，尚未完成公开发行的 Developer ID 签名与公证。
+
+CodeXwitch 的部署目标为 macOS 13+，目前仅在 Apple Silicon 开发环境验证。最低系统版本和 Intel 尚未实机验证；官方 Codex 也必须能在你的系统中运行。当前还没有正式公开的预编译 Release。
 
 ## 使用
 
-1. 正常打开官方 Codex 并登录，再打开 CodeXwitch；菜单中自动显示当前账号。
-2. 点击“添加账号…”。Codex 会退出并重新启动进入登录流程；登录完成后账号自动加入列表。
-3. 菜单列出当前账号以外的已保存账号，点击即可切换。添加过程中放弃登录，可以选择之前保存的账号切回。
-4. “设置…”中每行的“删除”仅移除本程序的保存记录，不退出当前 Codex、不删除会话。删除当前账号后，凭据刷新和小程序重启不会立即保存回来；切到其他账号后或主动走“添加账号”流程重新登录，可再次保存。
+1. 正常打开 Codex 并登录，再打开 CodeXwitch。当前账号会自动加入已保存列表。
+2. 点击“添加账号…”。CodeXwitch 会正常退出 Codex、保存当前凭据，并重新打开 Codex 的登录界面。在官方 App 中登录另一个账号即可。
+3. 打开下拉菜单，点击备选账号完成切换。添加过程中放弃登录时，可以选择已保存账号切回。
+4. 打开“设置…”移除不再需要的账号保存记录。删除当前账号的记录不会退出 Codex，也不会立即被自动保存回来。
 
-切换和添加会正常退出官方 App，请先完成正在运行的任务。等待期间菜单显示“等待退出”和确认提示；如果 Codex 弹出退出确认，请在 Codex 中处理。Codex 拒绝退出或等待超过 60 秒时，操作停止，活动认证不会修改；确认并退出后可重试。提前退出就立即继续，无需等满 60 秒。读写或启动失败时菜单/原生提示显示失败步骤；账号快照保留，可重试，没有自动回滚。App 未运行而磁盘仍有当前账号时，菜单提供“启动 Codex”，可直接重试启动而不回放旧凭据。
+切换前请完成 Codex 中正在执行的任务。如果 Codex 弹出退出确认，请在其窗口中确认；CodeXwitch 最多等待 60 秒。拒绝退出或超时会停止操作，认证文件不会被替换。
 
-操作时菜单首行显示当前阶段：准备账号、等待 Codex 退出、保存账号、切换账号或准备登录、正在启动 Codex。等待退出期间附带确认提示，操作完成或失败后恢复运行状态。
+保存、写入或启动失败时会显示失败阶段。程序不会自动回滚；已保存记录保留，修正问题后可重试。Codex 未运行且仍有当前账号时，菜单中的“启动 Codex”可直接重试启动。
 
-0.1.4 起使用统一的圆角六边形图标。菜单栏的交叉箭头表示运行中，空心圆表示未运行，旋转内圈表示处理中（包含等待退出），感叹号表示异常。处理时外框固定，启用系统“减少动态效果”时内圈不旋转。图标定稿及矢量源见 [Resources/Icons](Resources/Icons/README.md)。
+## 支持范围
 
-下拉菜单顶部显示 CodeXwitch 名称，设置窗口底部显示当前程序版本。
+- 官方桌面 App，bundle ID 为 `com.openai.codex`。
+- 默认 `~/.codex` 目录，ChatGPT 登录方式与文件认证。
+- 普通配置中的根级 `cli_auth_credentials_store = "file"`，或未设置该字段的情况。
 
-## 支持范围与本地数据
+暂不支持自定义 `CODEX_HOME`、API-key 认证、keyring/auto/ephemeral 认证后端、复杂或托管配置，以及自定义启动参数。不受支持或无法确定的认证配置会报错，程序不会修改 `config.toml`。
 
-第一版针对默认 `~/.codex`、文件认证、原安装 App（bundle ID `com.openai.codex`）。支持普通配置中根级 `cli_auth_credentials_store = "file"` 或默认值；keyring、auto、ephemeral、无法判断的配置会报错，不修改 `config.toml`。自定义 CODEX_HOME、启动参数、复杂/托管配置和 API-key 认证不在本版范围内。
+VS Code 扩展和独立 Codex CLI 如果共用认证，需要你自行退出；CodeXwitch 只管理官方桌面 App，不保证其他客户端同步切换。菜单账号反映磁盘认证，不能据此独立证明服务端登录有效或计费归属。
 
-菜单运行状态来自系统 App 列表，账号来自磁盘认证；不读取官方 App 的私有内存状态。正常外部启动/退出/登录无需由 CodeXwitch 发起。VS Code、独立 Codex CLI 或其他客户端如果共用认证，需要用户自行退出；程序不扫描或关闭它们，也不保证它们同步切换。
+## 本地数据与隐私
 
-账号快照保存在 `~/Library/Application Support/CodeXwitch/accounts/`，排除记录是同目录上级的 `suppressed-account.json`。私有目录 0700、文件 0600；凭据只保存在本机，不输出 token、不上传数据，不使用 `codex logout` 撤销保存凭据。该目录含登录凭据，不要提交或公开它。
+| 路径 | 用途 |
+|---|---|
+| `~/.codex/auth.json` | Codex 当前认证；切换时替换，添加账号时移除 |
+| `~/Library/Application Support/CodeXwitch/accounts/` | 已保存账号的完整凭据快照 |
+| `~/Library/Application Support/CodeXwitch/suppressed-account.json` | 防止已删除的当前账号立即被重新保存 |
 
-## 诊断日志
+凭据保存在本机文件中，**包含 token，未额外加密，也未存入钥匙串**。程序设置私有目录权限为 `0700`、凭据文件权限为 `0600`；有相应本机访问权限的软件仍可能读取它们。CodeXwitch 不上传凭据，不记录 token、邮箱或账号 ID，也不调用 `codex logout` 撤销已保存凭据。
 
-0.1.1 起使用 macOS 系统统一日志，Console 中按 subsystem `local.codexwitch.app` 过滤，或运行：
+请勿将认证文件、账号快照、token 或含真实账号的截图提交到仓库或公开 Issue。删除保存记录只移除本机副本，不等于撤销登录授权。
+
+## 排查问题
+
+在 macOS Console 中按 subsystem `local.codexwitch.app` 过滤，或运行：
 
 ```sh
-/usr/bin/log show --last 30m --info --style compact --predicate 'subsystem == "local.codexwitch.app"'
+/usr/bin/log show --last 30m --info --style compact \
+  --predicate 'subsystem == "local.codexwitch.app"'
 ```
 
-退出相关日志包含随机 attempt ID、PID、terminate 请求结果、耗时、原对象 captured 与重新枚举 fresh 的退出状态、仍存在的原主进程 alive_pids、完成或超时判定；启动完成记录系统实际返回的 returned_pid。等待时状态变化或约每秒记录一次；系统 launch/terminate 通知即使在切换忙碌期间也记录。操作日志包含类型、失败阶段和错误类型，不包含邮箱、账号 ID、token 或认证文件内容。
+日志包含操作阶段、退出等待、主进程 PID、耗时和启动结果，可用于区分退出超时与重新启动失败。报告问题时附上 macOS、Codex 与 CodeXwitch 版本、复现步骤和经过检查的相关日志；不要附上认证文件。
 
-更新后需重新启动 CodeXwitch 才会启用新版。0.1.3 同时检查最新系统 App 列表和退出前捕获的主进程 PID，避免旧对象状态未更新造成超时，也避免列表短暂为空时过早重启。PID 检查不发送信号、不强制结束进程，不扫描 VS Code 或 CLI；退出等待上限仍为 60 秒。
+## 开发与贡献
 
-## 设计与验证
+| 目录 | 内容 |
+|---|---|
+| `Sources/CodeXwitch/` | 应用入口 |
+| `Sources/CodeXwitchKit/` | 账号存储、切换流程、App 生命周期和原生 UI |
+| `Tests/CodeXwitchKitTests/` | 虚构凭据、临时目录、假 App 与原生绘制测试 |
+| `Resources/` | 应用元数据、App 图标和图标矢量源 |
+| `scripts/build-app.sh` | 构建并打包 `.app` |
 
-- [已批准设计](docs/superpowers/specs/2026-10-09-account-switcher-design.md)
-- [实现计划](docs/superpowers/plans/2026-10-09-codexwitch-implementation.md)
-- [验证记录与尚未实测的项目](docs/verification.md)
-- [下拉菜单原型](docs/ui/menu.png)
-- [设置窗口原型](docs/ui/settings.png)
+提交行为变更时，请描述复现方式和预期行为，加入相关回归测试，并运行 `swift test`。涉及退出和凭据写入时，应使用假 App 与临时认证目录，不以真实账号切换代替自动测试。开发约定见 [AGENTS.md](AGENTS.md)，验证范围见 [docs/verification.md](docs/verification.md)，图标说明见 [Resources/Icons/README.md](Resources/Icons/README.md)。
 
-CodeXwitch 是独立的第三方工具。只提供手动切换，不自动按额度轮换。
+## 许可证
+
+许可证尚未选定。正式开源发布前需要补充根目录 `LICENSE`。

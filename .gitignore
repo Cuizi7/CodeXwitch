@@ -2,3 +2,15 @@
 .swiftpm/
 build/
 .DS_Store
+.superpowers/
+.playwright-cli/
+output/
+*.log
+*.xcuserstate
+xcuserdata/
+.env
+.env.*
+!.env.example
+auth.json
+accounts/
+suppressed-account.json
