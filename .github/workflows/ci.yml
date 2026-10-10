@@ -1,0 +1,63 @@
+name: macOS CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-and-build:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Show toolchain
+        run: |
+          sw_vers
+          xcodebuild -version
+          swift --version
+
+      - name: Run tests
+        run: swift test
+
+      - name: Build application
+        run: bash scripts/build-app.sh
+
+      - name: Validate bundle
+        run: |
+          plutil -lint Resources/Info.plist build/CodeXwitch.app/Contents/Info.plist
+          codesign --verify --strict build/CodeXwitch.app
+          test -f build/CodeXwitch.app/Contents/Resources/AppIcon.icns
+          cmp LICENSE build/CodeXwitch.app/Contents/Resources/LICENSE
+          for icon in MenuRunning MenuStopped MenuProcessing MenuError ProcessingFrame ProcessingSpinner; do
+            test -f "build/CodeXwitch.app/Contents/Resources/CodeXwitch_CodeXwitchKit.bundle/Icons/$icon.pdf"
+          done
+
+      - name: Package application
+        id: package
+        run: |
+          version=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' build/CodeXwitch.app/Contents/Info.plist)
+          architecture=$(uname -m)
+          artifact="CodeXwitch-$version-macos-$architecture"
+          ditto -c -k --sequesterRsrc --keepParent build/CodeXwitch.app "build/$artifact.zip"
+          echo "name=$artifact" >> "$GITHUB_OUTPUT"
+          echo "path=build/$artifact.zip" >> "$GITHUB_OUTPUT"
+
+      - name: Upload application
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ steps.package.outputs.name }}
+          path: ${{ steps.package.outputs.path }}
+          if-no-files-found: error
+          retention-days: 14

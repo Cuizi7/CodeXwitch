@@ -30,7 +30,9 @@ final class MenuBarIcons {
     private let processingSpinner: NSImage?
 
     init() {
-        let bundle = Bundle.module
+        // Older SwiftPM accessors only probe the app root and the original build path.
+        let packaged = Bundle.main.resourceURL?.appendingPathComponent("CodeXwitch_CodeXwitchKit.bundle")
+        let bundle = packaged.flatMap(Bundle.init(url:)) ?? Bundle.module
         func load(_ name: String) -> NSImage? {
             guard let url = bundle.url(forResource: name, withExtension: "pdf", subdirectory: "Icons"),
                   let image = NSImage(contentsOf: url) else { return nil }
