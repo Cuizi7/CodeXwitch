@@ -10,6 +10,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var timer: Timer?
     private var observers: [NSObjectProtocol] = []
     private var lastState: SwitcherState?
+    private let menuIcons = MenuBarIcons()
+    private var iconState: MenuIconState?
+    private var iconTimer: Timer?
+    private var iconRotation: CGFloat = 0
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
@@ -25,9 +29,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                                         quitManager: { NSApplication.shared.terminate(nil) })
         menuController = controller
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        let image = NSImage(systemSymbolName: "person.2", accessibilityDescription: "CodeXwitch")
-        image?.isTemplate = true
-        item.button?.image = image
+        item.button?.image = menuIcons.image(for: .stopped)
         item.button?.toolTip = "CodeXwitch — Codex 账号切换器"
         item.menu = controller.menu
         statusItem = item
@@ -60,6 +62,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard state != lastState else { return }
         let previous = lastState
         lastState = state
+        updateStatusIcon(state)
         menuController?.rebuild()
         if settingsController?.window?.isVisible == true { settingsController?.reload() }
         if previous?.isBusy == true, !state.isBusy, let error = state.error {
@@ -68,6 +71,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             alert.informativeText = error
             alert.addButton(withTitle: "好")
             alert.runModal()
+        }
+    }
+    private func updateStatusIcon(_ state: SwitcherState) {
+        let kind = MenuIconState(state)
+        statusItem?.button?.toolTip = "CodeXwitch — \(state.progressText ?? kind.description)"
+        statusItem?.button?.setAccessibilityLabel("CodeXwitch，\(kind.description)")
+        guard kind != iconState else { return }
+        iconState = kind
+        iconTimer?.invalidate()
+        iconTimer = nil
+        iconRotation = 0
+        statusItem?.button?.image = menuIcons.image(for: kind)
+        if kind == .processing {
+            let timer = Timer(timeInterval: 1.0 / 12, repeats: true) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    guard let self, !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else { return }
+                    self.iconRotation = (self.iconRotation + 30).truncatingRemainder(dividingBy: 360)
+                    self.statusItem?.button?.image = self.menuIcons.image(for: .processing, rotation: self.iconRotation)
+                }
+            }
+            RunLoop.main.add(timer, forMode: .common)
+            iconTimer = timer
         }
     }
     private func openSettings() {
@@ -95,6 +120,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         Diagnostics.application.notice("application.stop pid=\(ProcessInfo.processInfo.processIdentifier, privacy: .public)")
         timer?.invalidate()
+        iconTimer?.invalidate()
         for observer in observers { NSWorkspace.shared.notificationCenter.removeObserver(observer) }
     }
 }

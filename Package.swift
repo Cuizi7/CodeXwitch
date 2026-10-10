@@ -6,7 +6,7 @@ let package = Package(
     products: [.library(name: "CodeXwitchKit", targets: ["CodeXwitchKit"]),
                .executable(name: "CodeXwitch", targets: ["CodeXwitch"])],
     targets: [
-        .target(name: "CodeXwitchKit"),
+        .target(name: "CodeXwitchKit", resources: [.copy("Resources/Icons")]),
         .executableTarget(name: "CodeXwitch", dependencies: ["CodeXwitchKit"]),
         .testTarget(name: "CodeXwitchKitTests", dependencies: ["CodeXwitchKit"])
     ]
