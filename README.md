@@ -21,6 +21,7 @@ CodeXwitch 是独立的第三方项目，与 OpenAI 没有隶属或背书关系�
 - 在下拉菜单中查看当前账号、选择备选账号，或启动已停止的 Codex。
 - 添加账号时在原 Codex App 中完成官方登录。
 - 在设置窗口中删除已保存账号，查看程序版本。
+- 可在设置中开启“登录时启动 CodeXwitch”，默认关闭。
 - 显示准备、等待退出、切换和启动等操作阶段。
 
 
@@ -28,7 +29,7 @@ CodeXwitch 是独立的第三方项目，与 OpenAI 没有隶属或背书关系�
 
 需要 macOS 13+，并已安装可正常运行的官方 Codex。预编译包目前提供 Apple Silicon（arm64）版本。
 
-[下载 CodeXwitch 0.1.6（Apple Silicon）](https://github.com/Cuizi7/CodeXwitch/releases/download/v0.1.6/CodeXwitch-0.1.6-macos-arm64.zip)
+[下载 CodeXwitch 0.1.7（Apple Silicon）](https://github.com/Cuizi7/CodeXwitch/releases/download/v0.1.7/CodeXwitch-0.1.7-macos-arm64.zip)
 
 解压下载的应用包，将 `CodeXwitch.app` 拖入 Applications 后打开。程序常驻菜单栏，不显示 Dock 图标。
 
@@ -55,6 +56,8 @@ open build/CodeXwitch.app
 3. 点击菜单中的备选账号，即可切换。放弃添加时，也可以选择已保存账号切回。
 4. 在“设置…”中删除不需要的账号记录。删除记录不会退出当前 Codex。
 
+需要登录 Mac 后自动运行时，在“设置…”中开启“登录时启动 CodeXwitch”。若提示需要批准，点击“系统设置…”并允许该登录项。
+
 切换前请完成 Codex 中正在执行的任务。如果弹出退出确认，请在 60 秒内确认，超时会停止切换。
 
 ## 注意事项
@@ -65,6 +68,7 @@ open build/CodeXwitch.app
 
 ## 更新日志
 
+- **0.1.7**：新增登录自启动开关，默认关闭。
 - **0.1.6**：修复移动应用后可能无法加载图标的问题。
 - **0.1.5**：菜单显示应用名称，设置中显示版本号。
 - **0.1.4**：新增 App 图标和菜单栏状态图标。

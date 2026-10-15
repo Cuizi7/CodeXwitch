@@ -29,7 +29,7 @@ final class PresentationTests: XCTestCase {
     func testBusyMenuDisablesMutation() async throws {
         let (d, _, app, s, _, b) = try setup(); defer { withExtendedLifetime(d) {} }
         let menu = MenuController(switcher: s, openSettings: {}, quitManager: {})
-        let settings = SettingsWindowController(switcher: s, confirmDeletion: { _ in true })
+        let settings = SettingsWindowController(switcher: s, loginItem: FakeLoginItem(), confirmDeletion: { _ in true })
         app.holdQuit = true; let operation = Task { await s.switchTo(b.account.id) }
         while app.quitContinuation == nil { await Task.yield() }
         menu.rebuild(); settings.reload()
@@ -72,7 +72,7 @@ final class PresentationTests: XCTestCase {
     }
     func testSettingsRowsRefreshOnReopen() async throws {
         let (d, _, _, s, _, b) = try setup(); defer { withExtendedLifetime(d) {} }
-        let settings = SettingsWindowController(switcher: s, confirmDeletion: { _ in true })
+        let settings = SettingsWindowController(switcher: s, loginItem: FakeLoginItem(), confirmDeletion: { _ in true })
         XCTAssertEqual(settings.window?.title, "CodeXwitch 设置")
         if let output = ProcessInfo.processInfo.environment["CODEXWITCH_RENDER_DIR"] {
             settings.window?.appearance = NSAppearance(named: .aqua)
@@ -88,10 +88,18 @@ final class PresentationTests: XCTestCase {
         XCTAssertFalse(labels(try XCTUnwrap(settings.window?.contentView)).contains("b@example.com"))
         XCTAssertTrue(labels(try XCTUnwrap(settings.window?.contentView)).contains("a@example.com"))
     }
+    func testSettingsProvidesLaunchAtLoginControl() async throws {
+        let (d, _, _, s, _, _) = try setup(); defer { withExtendedLifetime(d) {} }
+        let settings = SettingsWindowController(switcher: s, loginItem: FakeLoginItem(), confirmDeletion: { _ in false })
+        let toggle = try XCTUnwrap(buttons(try XCTUnwrap(settings.window?.contentView)).first {
+            $0.identifier?.rawValue == "launchAtLogin"
+        })
+        XCTAssertEqual(toggle.title, "登录时启动 CodeXwitch")
+    }
     func testDeleteConfirmationFalseHasNoSideEffect() async throws {
         let (d, store, _, s, a, b) = try setup(); defer { withExtendedLifetime(d) {} }
         var confirmed = false
-        let settings = SettingsWindowController(switcher: s, confirmDeletion: { _ in confirmed })
+        let settings = SettingsWindowController(switcher: s, loginItem: FakeLoginItem(), confirmDeletion: { _ in confirmed })
         let button = try XCTUnwrap(buttons(try XCTUnwrap(settings.window?.contentView)).first { $0.identifier?.rawValue == b.account.id })
         button.performClick(nil)
         XCTAssertEqual(try store.accounts().count, 2)
@@ -107,7 +115,7 @@ final class PresentationTests: XCTestCase {
         XCTAssertTrue(menu.menu.items.contains { $0.title == "当前：无法读取账号" })
         let emptyDir = try TestDirectory(), empty = Switcher(repository: emptyDir.store(), app: FakeApp(trace: EventTrace()))
         empty.refresh()
-        let settings = SettingsWindowController(switcher: empty, confirmDeletion: { _ in false })
+        let settings = SettingsWindowController(switcher: empty, loginItem: FakeLoginItem(), confirmDeletion: { _ in false })
         XCTAssertTrue(labels(try XCTUnwrap(settings.window?.contentView)).contains("暂无已保存账号"))
     }
     func testQuitManagerDoesNotQuitCodex() async throws {
@@ -132,7 +140,7 @@ final class PresentationTests: XCTestCase {
     }
     func testSettingsRowsStartAtTopAndDeleteButtonsAlignRight() async throws {
         let (d, _, _, s, a, _) = try setup(); defer { withExtendedLifetime(d) {} }
-        let settings = SettingsWindowController(switcher: s, confirmDeletion: { _ in false })
+        let settings = SettingsWindowController(switcher: s, loginItem: FakeLoginItem(), confirmDeletion: { _ in false })
         let content = try XCTUnwrap(settings.window?.contentView)
         content.superview?.layoutSubtreeIfNeeded()
         let all = allViews(content)

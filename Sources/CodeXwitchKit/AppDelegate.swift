@@ -99,7 +99,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let switcher else { return }
         switcher.refresh()
         if settingsController == nil {
-            settingsController = SettingsWindowController(switcher: switcher) { account in
+            settingsController = SettingsWindowController(switcher: switcher, loginItem: LoginItem()) { account in
                 let alert = NSAlert()
                 alert.messageText = "删除已保存的账号？"
                 alert.informativeText = "\(account.displayName)\n这不会退出当前 Codex。若要再次切换到此账号，需要重新登录。"

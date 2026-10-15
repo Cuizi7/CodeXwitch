@@ -1,28 +1,52 @@
 import AppKit
+import ServiceManagement
 
 @MainActor
-final class SettingsWindowController: NSWindowController {
+final class SettingsWindowController: NSWindowController, NSWindowDelegate {
     private let switcher: Switcher
+    private let loginItem: any LoginItemManaging
     private let confirmDeletion: (Account) -> Bool
+    private var updatingLoginItem = false
+    private var loginItemError: (status: SMAppService.Status, message: String)?
 
-    init(switcher: Switcher, confirmDeletion: @escaping (Account) -> Bool) {
+    init(switcher: Switcher, loginItem: any LoginItemManaging, confirmDeletion: @escaping (Account) -> Bool) {
         self.switcher = switcher
+        self.loginItem = loginItem
         self.confirmDeletion = confirmDeletion
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 570, height: 390),
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 570, height: 500),
                               styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
         window.title = "CodeXwitch 设置"
         window.isReleasedWhenClosed = false
-        window.contentMinSize = NSSize(width: 460, height: 320)
+        window.contentMinSize = NSSize(width: 460, height: 430)
         window.center()
         super.init(window: window)
+        window.delegate = self
         reload()
     }
     required init?(coder: NSCoder) { nil }
 
     func reload() {
         guard let window else { return }
-        let content = NSView(frame: NSRect(origin: .zero, size: window.contentView?.frame.size ?? NSSize(width: 570, height: 390)))
+        let content = NSView(frame: NSRect(origin: .zero, size: window.contentView?.frame.size ?? NSSize(width: 570, height: 500)))
         window.contentView = content
+        let loginStatus = loginItem.status
+        if loginItemError?.status != loginStatus { loginItemError = nil }
+        let launchAtLogin = NSButton(checkboxWithTitle: "登录时启动 CodeXwitch", target: self,
+                                     action: #selector(loginItemChanged(_:)))
+        launchAtLogin.identifier = NSUserInterfaceItemIdentifier("launchAtLogin")
+        launchAtLogin.state = loginStatus == .enabled || loginStatus == .requiresApproval ? .on : .off
+        launchAtLogin.isEnabled = !updatingLoginItem && !switcher.state.isBusy
+        let loginHelp = NSTextField(wrappingLabelWithString: loginItemDescription(loginStatus))
+        loginHelp.identifier = NSUserInterfaceItemIdentifier("loginItemStatus")
+        loginHelp.font = .systemFont(ofSize: 12)
+        loginHelp.textColor = .secondaryLabelColor
+        let loginSettings = NSButton(title: "系统设置…", target: self, action: #selector(openLoginItemSettings))
+        loginSettings.identifier = NSUserInterfaceItemIdentifier("loginItemSettings")
+        loginSettings.bezelStyle = .rounded
+        loginSettings.isHidden = loginStatus != .requiresApproval
+        loginSettings.isEnabled = loginStatus == .requiresApproval && !updatingLoginItem && !switcher.state.isBusy
+        let divider = NSBox()
+        divider.boxType = .separator
         let title = NSTextField(labelWithString: "已保存账号")
         title.font = .systemFont(ofSize: 22, weight: .semibold)
         let subtitle = NSTextField(labelWithString: "登录后自动保存，可在此移除。")
@@ -63,12 +87,23 @@ final class SettingsWindowController: NSWindowController {
             list.addArrangedSubview(empty)
             list.edgeInsets = NSEdgeInsets(top: 24, left: 16, bottom: 24, right: 16)
         }
-        for view in [title, subtitle, scroll, help, version] {
+        for view in [launchAtLogin, loginHelp, loginSettings, divider, title, subtitle, scroll, help, version] {
             view.translatesAutoresizingMaskIntoConstraints = false
             content.addSubview(view)
         }
         NSLayoutConstraint.activate([
-            title.topAnchor.constraint(equalTo: content.topAnchor, constant: 24),
+            launchAtLogin.topAnchor.constraint(equalTo: content.topAnchor, constant: 24),
+            launchAtLogin.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 24),
+            launchAtLogin.trailingAnchor.constraint(lessThanOrEqualTo: loginSettings.leadingAnchor, constant: -12),
+            loginSettings.centerYAnchor.constraint(equalTo: launchAtLogin.centerYAnchor),
+            loginSettings.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -24),
+            loginHelp.topAnchor.constraint(equalTo: launchAtLogin.bottomAnchor, constant: 6),
+            loginHelp.leadingAnchor.constraint(equalTo: launchAtLogin.leadingAnchor),
+            loginHelp.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -24),
+            divider.topAnchor.constraint(equalTo: loginHelp.bottomAnchor, constant: 18),
+            divider.leadingAnchor.constraint(equalTo: launchAtLogin.leadingAnchor),
+            divider.trailingAnchor.constraint(equalTo: loginHelp.trailingAnchor),
+            title.topAnchor.constraint(equalTo: divider.bottomAnchor, constant: 18),
             title.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 24),
             subtitle.topAnchor.constraint(equalTo: title.bottomAnchor, constant: 8),
             subtitle.leadingAnchor.constraint(equalTo: title.leadingAnchor),
@@ -86,6 +121,46 @@ final class SettingsWindowController: NSWindowController {
             list.widthAnchor.constraint(equalTo: scroll.contentView.widthAnchor)
         ])
     }
+    func windowDidBecomeKey(_ notification: Notification) { reload() }
+
+    private func loginItemDescription(_ status: SMAppService.Status) -> String {
+        if updatingLoginItem { return "正在更新登录项…" }
+        if let loginItemError {
+            if status == .requiresApproval {
+                return loginItemError.message + "\n需要在系统设置的“登录项”中批准 CodeXwitch 启动。"
+            }
+            return loginItemError.message
+        }
+        switch status {
+        case .enabled: return "登录 Mac 后自动在菜单栏运行。"
+        case .notRegistered: return "默认关闭，开启后将在登录 Mac 时运行。"
+        case .notFound: return "未找到登录项应用，请将 CodeXwitch 安装到“应用程序”后重试。"
+        case .requiresApproval: return "需要在系统设置的“登录项”中批准 CodeXwitch 启动。"
+        @unknown default: return "无法读取登录项状态，请稍后重试。"
+        }
+    }
+
+    @objc private func loginItemChanged(_ sender: NSButton) {
+        guard !updatingLoginItem, !switcher.state.isBusy else { return }
+        let enabled = sender.state == .on
+        updatingLoginItem = true
+        loginItemError = nil
+        reload()
+        Task {
+            do {
+                try await loginItem.setEnabled(enabled)
+            } catch {
+                loginItemError = (loginItem.status, "未能更新登录项，请确认应用已安装到“应用程序”后重试。")
+                let failure = error as NSError
+                Diagnostics.application.error("login-item.update failed code=\(failure.code, privacy: .public)")
+            }
+            updatingLoginItem = false
+            reload()
+        }
+    }
+
+    @objc private func openLoginItemSettings() { loginItem.openSystemSettings() }
+
     private func makeRow(_ account: Account) -> NSView {
         let image = NSImageView()
         image.image = NSImage(systemSymbolName: "person.crop.circle.fill", accessibilityDescription: "账号")
